@@ -2,11 +2,9 @@ name: Build Tauri App
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  release:
-    types: [published]
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -55,7 +53,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'UE Log Parser ${{ github.ref_name }}'
-          releaseBody: 'See CHANGELOG.md for details.'
+          releaseBody: 'See the assets below to download and install this version.'
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

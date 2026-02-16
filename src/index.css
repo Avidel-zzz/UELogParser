@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color-scheme: dark;
+  color: #e5e7eb;
+  background-color: #1e1e1e;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* 日志行样式 */
+.log-line {
+  padding: 0 8px;
+  border-left: 2px solid transparent;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-line:hover {
+  background-color: rgba(55, 65, 81, 0.5);
+}
+
+.log-line.error {
+  background-color: rgba(127, 29, 29, 0.3);
+  border-left-color: #ef4444;
+}
+
+.log-line.warning {
+  background-color: rgba(124, 45, 18, 0.3);
+  border-left-color: #f97316;
+}
+
+.log-line.display {
+  border-left-color: #3b82f6;
+}
+
+/* 高亮样式 */
+.highlight-path {
+  color: #60a5fa;
+}
+
+.highlight-uuid {
+  color: #f472b6;
+}
+
+.highlight-number {
+  color: #a78bfa;
+}

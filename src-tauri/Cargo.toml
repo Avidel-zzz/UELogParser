@@ -1,0 +1,40 @@
+[package]
+name = "ue-log-parser"
+version = "0.1.0"
+description = "UE Log Parser - High performance Unreal Engine log parser"
+authors = ["Avidel"]
+license = "MIT"
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "ue_log_parser_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.4", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.10.0", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+
+# 高性能日志解析
+regex = "1"
+memmap2 = "0.9"
+rayon = "1.10"
+lru = "0.12"
+chrono = { version = "0.4.38", default-features = false, features = ["serde", "clock"] }
+thiserror = "1.0"
+parking_lot = "0.12"
+once_cell = "1.19"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3

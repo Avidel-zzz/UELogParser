@@ -33,3 +33,4 @@ src-tauri/Cargo.lock
 # AI Assistant
 .claude/
 tasks.json
+PROGRESS.txt

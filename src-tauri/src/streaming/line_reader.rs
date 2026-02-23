@@ -2,12 +2,12 @@
 //!
 //! 使用 Seek 和缓存优化大文件的随机访问
 
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::Arc;
-use parking_lot::RwLock;
 
 use crate::parser::{FileIndex, LogChunk, LogEntry, LogParser};
 

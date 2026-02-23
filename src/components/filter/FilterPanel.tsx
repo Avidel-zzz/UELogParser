@@ -49,8 +49,6 @@ export function FilterPanel() {
     return cats.filter(c => c.toLowerCase().includes(search));
   }, [fileIndex.categories, categorySearch]);
 
-  const levelCounts = fileIndex.level_counts;
-
   return (
     <div className="filter-panel w-64 flex flex-col h-full overflow-hidden">
       {/* 标题 */}
@@ -96,9 +94,6 @@ export function FilterPanel() {
                   />
                   <span className={`w-2 h-2 rounded-full ${LEVEL_COLORS[level]}`} />
                   <span className="text-sm capitalize flex-1">{level}</span>
-                  <span className="text-xs text-gray-500">
-                    {levelCounts[level] || 0}
-                  </span>
                 </label>
               ))}
             </div>
@@ -160,11 +155,8 @@ export function FilterPanel() {
                       onChange={() => toggleCategory(category)}
                     />
                     <span className="text-sm flex-1 truncate" title={category}>
-                      {category}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {fileIndex.categories[category]}
-                    </span>
+                       {category}
+                     </span>
                   </label>
                 ))}
                 {filteredCategories.length === 0 && (

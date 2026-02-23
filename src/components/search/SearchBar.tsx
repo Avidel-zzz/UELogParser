@@ -8,10 +8,12 @@ export function SearchBar() {
     searchOptions,
     searchResults,
     currentSearchIndex,
+    showSearchOnly,
     search,
     setSearchOptions,
     nextSearchResult,
     prevSearchResult,
+    setShowSearchOnly,
   } = useLogStore();
 
   const [localPattern, setLocalPattern] = useState(searchOptions.pattern);
@@ -135,6 +137,20 @@ export function SearchBar() {
             ↓
           </button>
         </div>
+
+        {/* 过滤切换按钮 */}
+        <button
+          className={`px-2 py-1.5 rounded text-sm disabled:opacity-50 transition-colors ${
+            showSearchOnly
+              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+          }`}
+          onClick={() => setShowSearchOnly(!showSearchOnly)}
+          disabled={resultCount === 0}
+          title={showSearchOnly ? 'Show all lines' : 'Show only matching lines'}
+        >
+          🔍
+        </button>
 
         {/* 选项按钮 */}
         <button

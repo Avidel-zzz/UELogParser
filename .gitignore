@@ -29,3 +29,7 @@ src-tauri/target/
 # Tauri
 src-tauri/WixTools
 src-tauri/Cargo.lock
+
+# AI Assistant
+.claude/
+tasks.json

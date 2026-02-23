@@ -45,15 +45,53 @@ export function SearchBar() {
   const resultCount = searchResults.length;
   const currentPos = currentSearchIndex >= 0 ? currentSearchIndex + 1 : 0;
 
+  // Toggle regex mode
+  const toggleRegex = useCallback(() => {
+    setSearchOptions({ use_regex: !searchOptions.use_regex });
+  }, [searchOptions.use_regex, setSearchOptions]);
+
   return (
     <div className="bg-gray-800 border-b border-gray-700 p-2">
       <div className="flex items-center gap-2">
+        {/* Regex Toggle Switch - Visible in main bar */}
+        <button
+          onClick={toggleRegex}
+          className={`
+            relative flex items-center h-6 w-12 rounded-full transition-colors duration-200
+            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800
+            ${searchOptions.use_regex ? 'bg-blue-600' : 'bg-gray-600'}
+          `}
+          title={searchOptions.use_regex ? 'Regex mode: ON' : 'Regex mode: OFF'}
+          aria-pressed={searchOptions.use_regex}
+          aria-label="Toggle regex search mode"
+        >
+          {/* Slider dot */}
+          <span
+            className={`
+              inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200
+              ${searchOptions.use_regex ? 'translate-x-6' : 'translate-x-0.5'}
+            `}
+          />
+        </button>
+        {/* Regex label */}
+        <span
+          className={`text-xs font-medium min-w-[40px] ${
+            searchOptions.use_regex ? 'text-blue-400' : 'text-gray-400'
+          }`}
+        >
+          {searchOptions.use_regex ? 'Regex' : 'Text'}
+        </span>
+
         {/* 搜索输入 */}
         <div className="flex-1 relative">
           <input
             type="text"
-            className="search-input pr-20"
-            placeholder="Search (Ctrl+Enter)..."
+            className={`search-input pr-20 ${
+              searchOptions.use_regex
+                ? 'border-blue-500 focus:border-blue-400'
+                : 'border-gray-600 focus:border-gray-500'
+            }`}
+            placeholder={searchOptions.use_regex ? 'Regex Search (Ctrl+Enter)...' : 'Text Search (Ctrl+Enter)...'}
             value={localPattern}
             onChange={(e) => setLocalPattern(e.target.value)}
             onKeyDown={(e) => {

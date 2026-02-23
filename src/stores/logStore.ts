@@ -229,7 +229,13 @@ export const useLogStore = create<LogState>((set, get) => ({
 
   // 搜索
   search: async (options: SearchOptions) => {
-    set({ isLoading: true, searchOptions: options });
+    // Clear previous search results immediately before starting new search
+    set({
+      isLoading: true,
+      searchOptions: options,
+      searchResults: [],
+      currentSearchIndex: -1,
+    });
     try {
       const results = await api.searchLogs(options);
       set({

@@ -2,4 +2,4 @@
 
 pub mod regex_engine;
 
-pub use regex_engine::{SearchEngine, search};
+pub use regex_engine::{search, SearchEngine};

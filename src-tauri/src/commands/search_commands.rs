@@ -14,18 +14,15 @@ pub fn search_logs(
 ) -> Result<Vec<SearchResult>, String> {
     let state = state.lock().map_err(|e| e.to_string())?;
 
-    let file_path = state
-        .current_file
-        .as_ref()
-        .ok_or("No file opened")?;
+    let file_path = state.current_file.as_ref().ok_or("No file opened")?;
 
     let index = state
         .current_index
         .as_ref()
         .ok_or("No file index available")?;
 
-    let engine = SearchEngine::new(&options)
-        .map_err(|e| format!("Invalid search pattern: {}", e))?;
+    let engine =
+        SearchEngine::new(&options).map_err(|e| format!("Invalid search pattern: {}", e))?;
 
     engine
         .search_in_file(file_path, index, &options)
@@ -42,18 +39,15 @@ pub fn search_next(
 ) -> Result<Vec<SearchResult>, String> {
     let state = state.lock().map_err(|e| e.to_string())?;
 
-    let file_path = state
-        .current_file
-        .as_ref()
-        .ok_or("No file opened")?;
+    let file_path = state.current_file.as_ref().ok_or("No file opened")?;
 
     let index = state
         .current_index
         .as_ref()
         .ok_or("No file index available")?;
 
-    let engine = SearchEngine::new(&options)
-        .map_err(|e| format!("Invalid search pattern: {}", e))?;
+    let engine =
+        SearchEngine::new(&options).map_err(|e| format!("Invalid search pattern: {}", e))?;
 
     engine
         .search_next_page(file_path, index, from_line, max_results)
@@ -74,8 +68,7 @@ pub fn test_regex(
         ..Default::default()
     };
 
-    let engine = SearchEngine::new(&options)
-        .map_err(|e| format!("Invalid regex: {}", e))?;
+    let engine = SearchEngine::new(&options).map_err(|e| format!("Invalid regex: {}", e))?;
 
     Ok(engine.search_in_string(&text, 0))
 }

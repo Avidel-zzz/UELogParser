@@ -2,37 +2,36 @@
 //!
 //! 定义用于解析 UE 日志的各种正则表达式模式
 
-use regex::Regex;
 use once_cell::sync::Lazy;
+use regex::Regex;
 
 /// 标准日志格式: [2026.02.14-03.33.56:070][  0]LogCategory: Verbosity: Message
 pub static PATTERN_STANDARD: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
-        r"^\[(\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}:\d{3})\]\[\s*(\d+)\](\w+):\s*(\w+):\s*(.*)$"
-    ).expect("Invalid standard pattern")
+        r"^\[(\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}:\d{3})\]\[\s*(\d+)\](\w+):\s*(\w+):\s*(.*)$",
+    )
+    .expect("Invalid standard pattern")
 });
 
 /// 简单日志格式: LogCategory: Display: Message
-pub static PATTERN_SIMPLE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(\w+):\s*(\w+):\s*(.*)$").expect("Invalid simple pattern")
-});
+pub static PATTERN_SIMPLE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(\w+):\s*(\w+):\s*(.*)$").expect("Invalid simple pattern"));
 
 /// 文件头格式: Log file open, 02/14/26 11:33:35
 pub static PATTERN_HEADER: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^Log file open,\s*(\d{2}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})").expect("Invalid header pattern")
+    Regex::new(r"^Log file open,\s*(\d{2}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})")
+        .expect("Invalid header pattern")
 });
 
 /// 续行模式 (以空格或 > 开头)
-pub static PATTERN_CONTINUATION: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^(\s|>).*$").expect("Invalid continuation pattern")
-});
+pub static PATTERN_CONTINUATION: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(\s|>).*$").expect("Invalid continuation pattern"));
 
 /// 高亮模式
 
 /// Windows 路径: C:\xxx 或 \\xxx
-pub static HIGHLIGHT_PATH: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"[A-Za-z]:\\[^\s:]*|\\\\[^\s:]+").expect("Invalid path pattern")
-});
+pub static HIGHLIGHT_PATH: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"[A-Za-z]:\\[^\s:]*|\\\\[^\s:]+").expect("Invalid path pattern"));
 
 /// UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 pub static HIGHLIGHT_UUID: Lazy<Regex> = Lazy::new(|| {
@@ -41,9 +40,8 @@ pub static HIGHLIGHT_UUID: Lazy<Regex> = Lazy::new(|| {
 });
 
 /// 数字 (整数和小数)
-pub static HIGHLIGHT_NUMBER: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\b\d+\.?\d*\b").expect("Invalid number pattern")
-});
+pub static HIGHLIGHT_NUMBER: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\b\d+\.?\d*\b").expect("Invalid number pattern"));
 
 /// 日志类别提取
 pub static EXTRACT_CATEGORY: Lazy<Regex> = Lazy::new(|| {

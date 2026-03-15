@@ -1,7 +1,7 @@
 //! 日志状态管理 (Zustand)
 
 import { create } from 'zustand';
-import type { LogEntry, FileIndex, SearchResult, SearchOptions, FilterOptions } from '../types/log';
+import type { LogEntry, FileIndex, SearchResult, SearchOptions, FilterOptions, LogLevel } from '../types/log';
 import * as api from '../services/tauriApi';
 
 /// 自定义高亮规则
@@ -29,6 +29,9 @@ interface LogState {
 
   // 过滤
   filterOptions: FilterOptions;
+  
+  // Level/Category filter results (like search results)
+  filteredLines: number[];
 
   // UI 设置
   fontSize: number;
@@ -40,6 +43,7 @@ interface LogState {
 
   // 显示模式
   showFilteredOnly: boolean;
+  showSearchOnly: boolean;
 
   // Actions
   openFile: (path: string) => Promise<void>;
@@ -65,6 +69,11 @@ interface LogState {
 
   // 显示模式
   setShowFilteredOnly: (show: boolean) => void;
+  setShowSearchOnly: (show: boolean) => void;
+  
+  // Level/Category filter
+  applyLevelCategoryFilter: (levels: LogLevel[], categories: string[]) => Promise<void>;
+  clearFilteredLines: () => void;
 }
 
 export const useLogStore = create<LogState>((set, get) => ({
@@ -86,11 +95,13 @@ export const useLogStore = create<LogState>((set, get) => ({
     levels: [],
     exclude_categories: [],
   },
+  filteredLines: [],
   fontSize: 13,
   highlightColor: '#fbbf24',
   categorySearch: '',
   highlightRules: [],
   showFilteredOnly: false,
+  showSearchOnly: false,
 
   // 打开文件
   openFile: async (path: string) => {
@@ -110,6 +121,8 @@ export const useLogStore = create<LogState>((set, get) => ({
         loadedRanges: [{ start: 1, end: result.preview.length }],
         searchResults: [],
         currentSearchIndex: -1,
+        filteredLines: [],
+        showFilteredOnly: false,
       });
     } catch (e) {
       set({ error: String(e) });
@@ -128,6 +141,8 @@ export const useLogStore = create<LogState>((set, get) => ({
         loadedRanges: [],
         searchResults: [],
         currentSearchIndex: -1,
+        filteredLines: [],
+        showFilteredOnly: false,
       });
     } catch (e) {
       set({ error: String(e) });
@@ -229,7 +244,13 @@ export const useLogStore = create<LogState>((set, get) => ({
 
   // 搜索
   search: async (options: SearchOptions) => {
-    set({ isLoading: true, searchOptions: options });
+    // Clear previous search results immediately before starting new search
+    set({
+      isLoading: true,
+      searchOptions: options,
+      searchResults: [],
+      currentSearchIndex: -1,
+    });
     try {
       const results = await api.searchLogs(options);
       set({
@@ -329,6 +350,38 @@ export const useLogStore = create<LogState>((set, get) => ({
   // 设置只显示过滤后的行
   setShowFilteredOnly: (show: boolean) => {
     set({ showFilteredOnly: show });
+  },
+
+  // 设置只显示搜索结果
+  setShowSearchOnly: (show: boolean) => {
+    set({ showSearchOnly: show });
+  },
+
+  // Apply level/category filter and fetch matching lines from backend
+  applyLevelCategoryFilter: async (levels: LogLevel[], categories: string[]) => {
+    // If no filters selected, clear filtered lines
+    if (levels.length === 0 && categories.length === 0) {
+      set({ filteredLines: [], showFilteredOnly: false });
+      return;
+    }
+
+    set({ isLoading: true });
+    try {
+      const result = await api.getFilteredLines(levels, categories);
+      set({ 
+        filteredLines: result.line_numbers,
+        showFilteredOnly: result.line_numbers.length > 0,
+      });
+    } catch (e) {
+      set({ error: String(e), filteredLines: [] });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // Clear filtered lines
+  clearFilteredLines: () => {
+    set({ filteredLines: [], showFilteredOnly: false });
   },
 
   // 清除错误

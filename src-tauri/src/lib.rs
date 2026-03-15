@@ -2,10 +2,10 @@
 //!
 //! 高性能 Unreal Engine 日志解析器
 
-mod parser;
-mod streaming;
-mod search;
 mod commands;
+mod parser;
+mod search;
+mod streaming;
 
 use std::sync::Mutex;
 use tauri::Manager;
@@ -33,6 +33,8 @@ pub fn run() {
             commands::search_commands::search_logs,
             commands::search_commands::search_next,
             commands::search_commands::test_regex,
+            // 过滤命令
+            commands::filter_commands::get_filtered_lines,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

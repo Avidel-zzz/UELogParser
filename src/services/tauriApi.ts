@@ -7,7 +7,14 @@ import type {
   SearchResult,
   SearchOptions,
   OpenFileResult,
+  LogLevel,
 } from '../types/log';
+
+/// 过滤行结果
+export interface FilteredLinesResult {
+  line_numbers: number[];
+  total_count: number;
+}
 
 /// 打开日志文件
 export async function openLogFile(path: string): Promise<OpenFileResult> {
@@ -50,4 +57,15 @@ export async function testRegex(
   caseInsensitive: boolean
 ): Promise<SearchResult[]> {
   return invoke<SearchResult[]>('test_regex', { pattern, text, caseInsensitive });
+}
+
+/// 获取过滤后的行号
+export async function getFilteredLines(
+  levels: LogLevel[],
+  categories: string[]
+): Promise<FilteredLinesResult> {
+  return invoke<FilteredLinesResult>('get_filtered_lines', { 
+    levels, 
+    categories 
+  });
 }

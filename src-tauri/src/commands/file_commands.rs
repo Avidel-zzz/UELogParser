@@ -36,8 +36,7 @@ pub fn open_log_file(
     }
 
     // 构建索引
-    let index = index_file(&file_path)
-        .map_err(|e| format!("Failed to index file: {}", e))?;
+    let index = index_file(&file_path).map_err(|e| format!("Failed to index file: {}", e))?;
 
     // 创建行读取器
     let mut reader = LineReader::from_index(&file_path, index.clone())
@@ -54,10 +53,7 @@ pub fn open_log_file(
     state.current_index = Some(index.clone());
     state.line_reader = Some(reader);
 
-    Ok(OpenFileResult {
-        index,
-        preview,
-    })
+    Ok(OpenFileResult { index, preview })
 }
 
 /// 加载日志块
@@ -69,10 +65,7 @@ pub fn load_chunk(
 ) -> Result<LogChunk, String> {
     let mut state = state.lock().map_err(|e| e.to_string())?;
 
-    let reader = state
-        .line_reader
-        .as_mut()
-        .ok_or("No file opened")?;
+    let reader = state.line_reader.as_mut().ok_or("No file opened")?;
 
     reader
         .read_range(start_line, end_line)
@@ -90,9 +83,7 @@ pub fn get_file_index(
 
 /// 关闭当前文件
 #[tauri::command]
-pub fn close_file(
-    state: tauri::State<'_, Mutex<AppState>>,
-) -> Result<(), String> {
+pub fn close_file(state: tauri::State<'_, Mutex<AppState>>) -> Result<(), String> {
     let mut state = state.lock().map_err(|e| e.to_string())?;
     state.current_file = None;
     state.current_index = None;

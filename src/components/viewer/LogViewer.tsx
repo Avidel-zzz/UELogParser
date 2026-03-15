@@ -3,7 +3,7 @@
 import { useRef, useCallback, useEffect, memo, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useLogStore, type HighlightRule } from '../../stores/logStore';
-import { useFilterStore, passesFilter } from '../../stores/filterStore';
+import { useFilterStore } from '../../stores/filterStore';
 import { useHighlight } from '../../hooks/useHighlight';
 import { useLogStream } from '../../hooks/useLogStream';
 import type { LogEntry, SearchResult } from '../../types/log';
@@ -318,9 +318,13 @@ export function LogViewer() {
     fontSize,
     highlightColor,
     highlightRules,
+    showSearchOnly,
+    showFilteredOnly,
+    filteredLines,
     nextSearchResult,
     prevSearchResult,
     addHighlightRule,
+    ensureRangeLoaded,
   } = useLogStore();
   const filterState = useFilterStore();
   const { handleVisibleRangeChange, scrollToLine, totalLines } = useLogStream();
@@ -328,9 +332,20 @@ export function LogViewer() {
   const currentSearchLine = searchResults[currentSearchIndex]?.line_number ?? -1;
   const lineHeight = Math.max(16, fontSize + 4);
 
+  // Determine which mode we're in and the virtual count
+  // Priority: showFilteredOnly > showSearchOnly > normal
+  const effectiveShowFiltered = showFilteredOnly && filteredLines.length > 0;
+  const effectiveShowSearch = showSearchOnly && searchResults.length > 0 && !effectiveShowFiltered;
+  
+  const virtualCount = effectiveShowFiltered
+    ? filteredLines.length
+    : effectiveShowSearch
+    ? searchResults.length
+    : totalLines;
+
   // 虚拟滚动
   const virtualizer = useVirtualizer({
-    count: totalLines,
+    count: virtualCount,
     getScrollElement: () => parentRef.current,
     estimateSize: useCallback(() => lineHeight, [lineHeight]),
     overscan: 20,
@@ -343,8 +358,27 @@ export function LogViewer() {
     if (virtualItems.length === 0) return;
     const first = virtualItems[0].index;
     const last = virtualItems[virtualItems.length - 1].index;
-    handleVisibleRangeChange(first, last);
-  }, [virtualItems, handleVisibleRangeChange]);
+
+    if (effectiveShowFiltered) {
+      // In filtered-only mode, load the lines for visible filtered results
+      const lineNumbers = virtualItems.map(item => filteredLines[item.index]).filter((n): n is number => n !== undefined);
+      if (lineNumbers.length > 0) {
+        const minLine = Math.min(...lineNumbers);
+        const maxLine = Math.max(...lineNumbers);
+        ensureRangeLoaded(minLine, maxLine);
+      }
+    } else if (effectiveShowSearch) {
+      // In search-only mode, load the lines for visible search results
+      const lineNumbers = virtualItems.map(item => searchResults[item.index]?.line_number).filter((n): n is number => n !== undefined);
+      if (lineNumbers.length > 0) {
+        const minLine = Math.min(...lineNumbers);
+        const maxLine = Math.max(...lineNumbers);
+        ensureRangeLoaded(minLine, maxLine);
+      }
+    } else {
+      handleVisibleRangeChange(first, last);
+    }
+  }, [virtualItems, handleVisibleRangeChange, effectiveShowFiltered, effectiveShowSearch, searchResults, filteredLines, ensureRangeLoaded]);
 
   // 监听搜索结果导航
   useEffect(() => {
@@ -365,11 +399,19 @@ export function LogViewer() {
 
   // 跳转到搜索结果
   useEffect(() => {
-    if (currentSearchLine > 0) {
-      virtualizer.scrollToIndex(currentSearchLine - 1, { align: 'center' });
-      scrollToLine(currentSearchLine);
+    if (currentSearchIndex >= 0 && searchResults.length > 0) {
+      if (effectiveShowSearch) {
+        // In search-only mode, scroll to the index in searchResults
+        virtualizer.scrollToIndex(currentSearchIndex, { align: 'center' });
+      } else if (!effectiveShowFiltered) {
+        // In normal mode, scroll to the line number
+        if (currentSearchLine > 0) {
+          virtualizer.scrollToIndex(currentSearchLine - 1, { align: 'center' });
+          scrollToLine(currentSearchLine);
+        }
+      }
     }
-  }, [currentSearchLine, virtualizer, scrollToLine]);
+  }, [currentSearchIndex, currentSearchLine, virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, searchResults.length]);
 
   // 右键菜单处理
   const handleContextMenu = useCallback((e: React.MouseEvent, text: string) => {
@@ -388,9 +430,23 @@ export function LogViewer() {
 
   // 跳转到指定行
   const handleJumpToLine = useCallback((lineNumber: number) => {
-    virtualizer.scrollToIndex(lineNumber - 1, { align: 'center' });
-    scrollToLine(lineNumber);
-  }, [virtualizer, scrollToLine]);
+    if (effectiveShowSearch) {
+      // In search-only mode, find the index in searchResults
+      const idx = searchResults.findIndex(r => r.line_number === lineNumber);
+      if (idx >= 0) {
+        virtualizer.scrollToIndex(idx, { align: 'center' });
+      }
+    } else if (effectiveShowFiltered) {
+      // In filtered-only mode, find the index in filteredLines
+      const idx = filteredLines.indexOf(lineNumber);
+      if (idx >= 0) {
+        virtualizer.scrollToIndex(idx, { align: 'center' });
+      }
+    } else {
+      virtualizer.scrollToIndex(lineNumber - 1, { align: 'center' });
+      scrollToLine(lineNumber);
+    }
+  }, [virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, searchResults, filteredLines]);
 
   if (!fileIndex) {
     return (
@@ -410,8 +466,18 @@ export function LogViewer() {
         {/* 工具栏 */}
         <div className="flex items-center justify-between px-2 py-1 bg-gray-800 border-b border-gray-700 text-xs">
           <div className="text-gray-400">
-            {totalLines.toLocaleString()} lines
-            {searchResults.length > 0 && (
+            {effectiveShowFiltered ? (
+              <span className="text-green-400">
+                🔽 Filtered: {filteredLines.length.toLocaleString()} matching lines
+              </span>
+            ) : effectiveShowSearch ? (
+              <span className="text-blue-400">
+                🔍 Search: {searchResults.length.toLocaleString()} matching lines
+              </span>
+            ) : (
+              <span>{totalLines.toLocaleString()} lines</span>
+            )}
+            {searchResults.length > 0 && !effectiveShowFiltered && (
               <button
                 className="ml-4 text-blue-400 hover:text-blue-300"
                 onClick={() => setShowSearchResults(!showSearchResults)}
@@ -449,7 +515,16 @@ export function LogViewer() {
             }}
           >
             {virtualItems.map((virtualItem) => {
-              const lineNumber = virtualItem.index + 1;
+              // Determine line number based on mode
+              let lineNumber: number;
+              if (effectiveShowFiltered) {
+                lineNumber = filteredLines[virtualItem.index] ?? 0;
+              } else if (effectiveShowSearch) {
+                lineNumber = searchResults[virtualItem.index]?.line_number ?? 0;
+              } else {
+                lineNumber = virtualItem.index + 1;
+              }
+              
               const entry = entriesMap[lineNumber];
 
               if (!entry) {
@@ -474,7 +549,9 @@ export function LogViewer() {
                 );
               }
 
-              if (!passesFilter(entry, filterState)) {
+              // In filtered-only mode, we don't apply passesFilter since we already have filtered lines
+              // In normal mode, apply the filter
+              if (!effectiveShowFiltered && !passesFilter(entry, filterState)) {
                 return null;
               }
 
@@ -532,4 +609,31 @@ export function LogViewer() {
       )}
     </div>
   );
+}
+
+/// 检查日志条目是否通过过滤器
+function passesFilter(
+  entry: { category?: string; level: string },
+  filterState: { selectedLevels: Set<string>; selectedCategories: Set<string>; excludedCategories: Set<string> }
+): boolean {
+  // 检查级别
+  if (filterState.selectedLevels.size > 0) {
+    if (!filterState.selectedLevels.has(entry.level)) {
+      return false;
+    }
+  }
+
+  // 检查类别
+  if (filterState.selectedCategories.size > 0) {
+    if (!entry.category || !filterState.selectedCategories.has(entry.category)) {
+      return false;
+    }
+  }
+
+  // 检查排除的类别
+  if (entry.category && filterState.excludedCategories.has(entry.category)) {
+    return false;
+  }
+
+  return true;
 }

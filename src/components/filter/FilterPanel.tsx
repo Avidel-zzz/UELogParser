@@ -1,6 +1,6 @@
 //! 过滤面板组件
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useLogStore } from '../../stores/logStore';
 import { useFilterStore } from '../../stores/filterStore';
 import type { LogLevel } from '../../types/log';
@@ -17,7 +17,16 @@ const LEVEL_COLORS: Record<LogLevel, string> = {
 };
 
 export function FilterPanel() {
-  const { fileIndex, categorySearch, setCategorySearch } = useLogStore();
+  const { 
+    fileIndex, 
+    categorySearch, 
+    setCategorySearch, 
+    isLoading,
+    filteredLines,
+    showFilteredOnly,
+    applyLevelCategoryFilter,
+    clearFilteredLines,
+  } = useLogStore();
   const {
     selectedCategories,
     selectedLevels,
@@ -32,6 +41,18 @@ export function FilterPanel() {
 
   const [showLevels, setShowLevels] = useState(true);
   const [showCategories, setShowCategories] = useState(true);
+
+  // Apply filter and fetch matching lines from backend
+  const handleApplyFilter = useCallback(() => {
+    const levels = Array.from(selectedLevels);
+    const categories = Array.from(selectedCategories);
+    applyLevelCategoryFilter(levels, categories);
+  }, [selectedLevels, selectedCategories, applyLevelCategoryFilter]);
+
+  // Clear filter and show all lines
+  const handleClearFilter = useCallback(() => {
+    clearFilteredLines();
+  }, [clearFilteredLines]);
 
   if (!fileIndex) {
     return (
@@ -49,7 +70,8 @@ export function FilterPanel() {
     return cats.filter(c => c.toLowerCase().includes(search));
   }, [fileIndex.categories, categorySearch]);
 
-  const levelCounts = fileIndex.level_counts;
+  // Check if any filter is active
+  const hasActiveFilters = selectedLevels.size > 0 || selectedCategories.size > 0;
 
   return (
     <div className="filter-panel w-64 flex flex-col h-full overflow-hidden">
@@ -88,18 +110,18 @@ export function FilterPanel() {
             <div className="space-y-1">
               {LOG_LEVELS.map((level) => (
                 <label key={level} className="filter-item">
-                  <input
-                    type="checkbox"
-                    className="filter-checkbox"
-                    checked={selectedLevels.has(level)}
-                    onChange={() => toggleLevel(level)}
-                  />
-                  <span className={`w-2 h-2 rounded-full ${LEVEL_COLORS[level]}`} />
-                  <span className="text-sm capitalize flex-1">{level}</span>
-                  <span className="text-xs text-gray-500">
-                    {levelCounts[level] || 0}
-                  </span>
-                </label>
+                   <input
+                     type="checkbox"
+                     className="filter-checkbox"
+                     checked={selectedLevels.has(level)}
+                     onChange={() => toggleLevel(level)}
+                   />
+                   <span className={`w-2 h-2 rounded-full ${LEVEL_COLORS[level]}`} />
+                   <span className="text-sm capitalize flex-1">{level}</span>
+                   <span className="text-xs text-gray-500 ml-auto">
+                     {fileIndex.level_counts[level] || 0}
+                   </span>
+                 </label>
               ))}
             </div>
           </div>
@@ -160,11 +182,8 @@ export function FilterPanel() {
                       onChange={() => toggleCategory(category)}
                     />
                     <span className="text-sm flex-1 truncate" title={category}>
-                      {category}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {fileIndex.categories[category]}
-                    </span>
+                       {category}
+                     </span>
                   </label>
                 ))}
                 {filteredCategories.length === 0 && (
@@ -178,11 +197,44 @@ export function FilterPanel() {
         )}
       </div>
 
-      {/* 重置按钮 */}
-      <div className="p-3 border-t border-gray-700">
+      {/* 应用过滤按钮 */}
+      <div className="p-3 border-t border-gray-700 space-y-2">
+        {showFilteredOnly && filteredLines.length > 0 && (
+          <div className="text-xs text-center text-blue-400 mb-2">
+            Showing {filteredLines.length.toLocaleString()} filtered lines
+          </div>
+        )}
+        
+        <div className="flex gap-2">
+          <button
+            className={`flex-1 px-3 py-1.5 rounded text-sm transition-colors ${
+              hasActiveFilters
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-400 cursor-not-allowed'
+            } ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
+            onClick={handleApplyFilter}
+            disabled={!hasActiveFilters || isLoading}
+          >
+            {isLoading ? 'Loading...' : 'Apply Filter'}
+          </button>
+          
+          {showFilteredOnly && (
+            <button
+              className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+              onClick={handleClearFilter}
+              title="Clear filter and show all lines"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        
         <button
           className="w-full px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm"
-          onClick={reset}
+          onClick={() => {
+            reset();
+            clearFilteredLines();
+          }}
         >
           Reset All Filters
         </button>

@@ -33,10 +33,7 @@ impl FileIndexer {
 
     /// 构建文件索引
     pub fn build_index(&self) -> FileIndex {
-        let mut index = FileIndex::new(
-            self.file_path.clone(),
-            self.mmap.len() as u64,
-        );
+        let mut index = FileIndex::new(self.file_path.clone(), self.mmap.len() as u64);
 
         let mut line_offsets: Vec<u64> = vec![0]; // 第一行从 0 开始
         let mut current_offset: u64 = 0;
@@ -62,7 +59,9 @@ impl FileIndexer {
                         }
                         // 提取级别
                         if let Some(level) = LogParser::extract_level(line) {
-                            *level_counts.entry(level.display_name().to_string()).or_insert(0) += 1;
+                            *level_counts
+                                .entry(level.display_name().to_lowercase())
+                                .or_insert(0) += 1;
                         }
                     }
                 }

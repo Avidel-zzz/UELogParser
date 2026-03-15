@@ -34,3 +34,4 @@ src-tauri/Cargo.lock
 .claude/
 tasks.json
 PROGRESS.txt
+.swarm/

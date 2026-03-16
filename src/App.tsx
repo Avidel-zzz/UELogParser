@@ -77,7 +77,7 @@ function App() {
       {fileIndex && <SearchBar />}
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         {showFilter && fileIndex ? (
           <ResizablePanel
             leftPanel={<FilterPanel />}

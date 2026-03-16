@@ -204,23 +204,25 @@ const LogLine = memo(function LogLine({
 
 /// 搜索结果面板
 function SearchResultsPanel({
+  width,
   onClose,
   onJumpToLine,
 }: {
+  width: number;
   onClose: () => void;
   onJumpToLine: (line: number) => void;
 }) {
   const { searchResults, currentSearchIndex, entriesMap } = useLogStore();
 
   return (
-    <div className="w-72 bg-gray-800 border-l border-gray-700 flex flex-col">
+    <div style={{ width }} className="h-full bg-gray-800 border-l border-gray-700 flex flex-col flex-shrink-0">
       <div className="p-2 border-b border-gray-700 flex items-center justify-between">
         <span className="text-sm font-medium">
           Search Results ({searchResults.length})
         </span>
         <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
       </div>
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto">
         {searchResults.length === 0 ? (
           <div className="p-4 text-center text-gray-500 text-sm">
             No search results
@@ -309,6 +311,8 @@ export function LogViewer() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [searchPanelWidth, setSearchPanelWidth] = useState(288);
+  const [isDraggingSearchPanel, setIsDraggingSearchPanel] = useState(false);
 
   const {
     entriesMap,
@@ -477,9 +481,9 @@ export function LogViewer() {
   }
 
   return (
-    <div className="flex-1 flex overflow-hidden relative bg-gray-900">
+    <div className="h-full flex overflow-hidden relative bg-gray-900">
       {/* 日志列表 */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         {/* 工具栏 */}
         <div className="flex items-center justify-between px-2 py-1 bg-gray-800 border-b border-gray-700 text-xs">
           <div className="text-gray-400">
@@ -521,7 +525,7 @@ export function LogViewer() {
         {/* 日志列表 */}
         <div
           ref={parentRef}
-          className="flex-1 overflow-auto bg-gray-900"
+          className="flex-1 min-h-0 overflow-auto bg-gray-900"
           style={{ fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` }}
         >
           <div
@@ -603,10 +607,44 @@ export function LogViewer() {
 
       {/* 搜索结果面板 */}
       {showSearchResults && searchResults.length > 0 && (
-        <SearchResultsPanel
-          onClose={() => setShowSearchResults(false)}
-          onJumpToLine={handleJumpToLine}
-        />
+        <>
+          {/* Resize Handle */}
+          <div
+            className={`w-1 bg-gray-700 hover:bg-blue-500 cursor-col-resize flex-shrink-0 transition-colors duration-150 ${
+              isDraggingSearchPanel ? 'bg-blue-500' : ''
+            }`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsDraggingSearchPanel(true);
+              const startX = e.clientX;
+              const startWidth = searchPanelWidth;
+
+              const handleMouseMove = (e: MouseEvent) => {
+                const delta = startX - e.clientX;
+                const newWidth = Math.min(400, Math.max(150, startWidth + delta));
+                setSearchPanelWidth(newWidth);
+              };
+
+              const handleMouseUp = () => {
+                setIsDraggingSearchPanel(false);
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+              };
+
+              document.addEventListener('mousemove', handleMouseMove);
+              document.addEventListener('mouseup', handleMouseUp);
+              document.body.style.cursor = 'col-resize';
+              document.body.style.userSelect = 'none';
+            }}
+          />
+          <SearchResultsPanel
+            width={searchPanelWidth}
+            onClose={() => setShowSearchResults(false)}
+            onJumpToLine={handleJumpToLine}
+          />
+        </>
       )}
 
       {/* 设置面板 */}

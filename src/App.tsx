@@ -4,6 +4,7 @@ import { useLogStore } from './stores/logStore';
 import { SearchBar } from './components/search/SearchBar';
 import { FilterPanel } from './components/filter/FilterPanel';
 import { LogViewer } from './components/viewer/LogViewer';
+import { ResizablePanel } from './components/ResizablePanel';
 
 /// Main application
 function App() {
@@ -77,8 +78,17 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {showFilter && fileIndex && <FilterPanel />}
-        <LogViewer />
+        {showFilter && fileIndex ? (
+          <ResizablePanel
+            leftPanel={<FilterPanel />}
+            rightPanel={<LogViewer />}
+            initialLeftWidth={256}
+            minWidth={150}
+            maxWidth={500}
+          />
+        ) : (
+          <LogViewer />
+        )}
       </div>
 
       {/* Footer */}

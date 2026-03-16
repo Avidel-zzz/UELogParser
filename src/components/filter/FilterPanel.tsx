@@ -56,7 +56,7 @@ export function FilterPanel() {
 
   if (!fileIndex) {
     return (
-      <div className="filter-panel w-64 p-4 text-gray-500 text-sm">
+      <div className="filter-panel p-4 text-gray-500 text-sm">
         Open a log file to see filters
       </div>
     );
@@ -74,7 +74,7 @@ export function FilterPanel() {
   const hasActiveFilters = selectedLevels.size > 0 || selectedCategories.size > 0;
 
   return (
-    <div className="filter-panel w-64 flex flex-col h-full overflow-hidden">
+    <div className="filter-panel flex flex-col h-full overflow-hidden">
       {/* 标题 */}
       <div className="p-3 border-b border-gray-700">
         <h2 className="text-sm font-semibold text-gray-300">Filters</h2>

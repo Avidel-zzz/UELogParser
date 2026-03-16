@@ -244,11 +244,11 @@ export const useLogStore = create<LogState>((set, get) => ({
 
   // 搜索
   search: async (options: SearchOptions) => {
-    // Clear previous search results immediately before starting new search
+    // Set loading but keep previous results to avoid flickering
     set({
       isLoading: true,
       searchOptions: options,
-      searchResults: [],
+      // Don't clear searchResults immediately to avoid UI flickering
       currentSearchIndex: -1,
     });
     try {

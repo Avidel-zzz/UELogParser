@@ -1,6 +1,6 @@
 //! 虚拟滚动日志列表
 
-import { useRef, useCallback, useEffect, memo, useState } from 'react';
+import { useRef, useCallback, useEffect, memo, useState, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useLogStore, type HighlightRule } from '../../stores/logStore';
 import { useFilterStore } from '../../stores/filterStore';
@@ -336,11 +336,25 @@ export function LogViewer() {
   // Priority: showFilteredOnly > showSearchOnly > normal
   const effectiveShowFiltered = showFilteredOnly && filteredLines.length > 0;
   const effectiveShowSearch = showSearchOnly && searchResults.length > 0 && !effectiveShowFiltered;
-  
+
+  // Deduplicate search results by line_number for search-only mode
+  // (one line may have multiple matches, but we only show it once)
+  const uniqueSearchLines = useMemo(() => {
+    const seen = new Set<number>();
+    const unique: number[] = [];
+    for (const result of searchResults) {
+      if (!seen.has(result.line_number)) {
+        seen.add(result.line_number);
+        unique.push(result.line_number);
+      }
+    }
+    return unique;
+  }, [searchResults]);
+
   const virtualCount = effectiveShowFiltered
     ? filteredLines.length
     : effectiveShowSearch
-    ? searchResults.length
+    ? uniqueSearchLines.length
     : totalLines;
 
   // 虚拟滚动
@@ -369,7 +383,7 @@ export function LogViewer() {
       }
     } else if (effectiveShowSearch) {
       // In search-only mode, load the lines for visible search results
-      const lineNumbers = virtualItems.map(item => searchResults[item.index]?.line_number).filter((n): n is number => n !== undefined);
+      const lineNumbers = virtualItems.map(item => uniqueSearchLines[item.index]).filter((n): n is number => n !== undefined);
       if (lineNumbers.length > 0) {
         const minLine = Math.min(...lineNumbers);
         const maxLine = Math.max(...lineNumbers);
@@ -378,7 +392,7 @@ export function LogViewer() {
     } else {
       handleVisibleRangeChange(first, last);
     }
-  }, [virtualItems, handleVisibleRangeChange, effectiveShowFiltered, effectiveShowSearch, searchResults, filteredLines, ensureRangeLoaded]);
+  }, [virtualItems, handleVisibleRangeChange, effectiveShowFiltered, effectiveShowSearch, uniqueSearchLines, filteredLines, ensureRangeLoaded]);
 
   // 监听搜索结果导航
   useEffect(() => {
@@ -401,8 +415,11 @@ export function LogViewer() {
   useEffect(() => {
     if (currentSearchIndex >= 0 && searchResults.length > 0) {
       if (effectiveShowSearch) {
-        // In search-only mode, scroll to the index in searchResults
-        virtualizer.scrollToIndex(currentSearchIndex, { align: 'center' });
+        // In search-only mode, find the index in uniqueSearchLines
+        const idx = uniqueSearchLines.indexOf(currentSearchLine);
+        if (idx >= 0) {
+          virtualizer.scrollToIndex(idx, { align: 'center' });
+        }
       } else if (!effectiveShowFiltered) {
         // In normal mode, scroll to the line number
         if (currentSearchLine > 0) {
@@ -411,7 +428,7 @@ export function LogViewer() {
         }
       }
     }
-  }, [currentSearchIndex, currentSearchLine, virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, searchResults.length]);
+  }, [currentSearchIndex, currentSearchLine, virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, searchResults.length, uniqueSearchLines]);
 
   // 右键菜单处理
   const handleContextMenu = useCallback((e: React.MouseEvent, text: string) => {
@@ -431,8 +448,8 @@ export function LogViewer() {
   // 跳转到指定行
   const handleJumpToLine = useCallback((lineNumber: number) => {
     if (effectiveShowSearch) {
-      // In search-only mode, find the index in searchResults
-      const idx = searchResults.findIndex(r => r.line_number === lineNumber);
+      // In search-only mode, find the index in uniqueSearchLines
+      const idx = uniqueSearchLines.indexOf(lineNumber);
       if (idx >= 0) {
         virtualizer.scrollToIndex(idx, { align: 'center' });
       }
@@ -446,7 +463,7 @@ export function LogViewer() {
       virtualizer.scrollToIndex(lineNumber - 1, { align: 'center' });
       scrollToLine(lineNumber);
     }
-  }, [virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, searchResults, filteredLines]);
+  }, [virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, uniqueSearchLines, filteredLines]);
 
   if (!fileIndex) {
     return (
@@ -472,7 +489,7 @@ export function LogViewer() {
               </span>
             ) : effectiveShowSearch ? (
               <span className="text-blue-400">
-                🔍 Search: {searchResults.length.toLocaleString()} matching lines
+                🔍 Search: {uniqueSearchLines.length.toLocaleString()} matching lines ({searchResults.length.toLocaleString()} matches)
               </span>
             ) : (
               <span>{totalLines.toLocaleString()} lines</span>
@@ -520,7 +537,7 @@ export function LogViewer() {
               if (effectiveShowFiltered) {
                 lineNumber = filteredLines[virtualItem.index] ?? 0;
               } else if (effectiveShowSearch) {
-                lineNumber = searchResults[virtualItem.index]?.line_number ?? 0;
+                lineNumber = uniqueSearchLines[virtualItem.index] ?? 0;
               } else {
                 lineNumber = virtualItem.index + 1;
               }

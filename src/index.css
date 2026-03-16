@@ -81,3 +81,23 @@ body {
 .highlight-number {
   color: #a78bfa;
 }
+
+/* 过滤面板样式 */
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.filter-item:hover {
+  background-color: rgba(55, 65, 81, 0.3);
+}
+
+.filter-checkbox {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}

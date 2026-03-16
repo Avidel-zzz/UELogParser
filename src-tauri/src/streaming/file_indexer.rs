@@ -124,8 +124,8 @@ mod tests {
         assert_eq!(index.total_lines, 3);
         assert!(index.categories.contains_key("LogInit"));
         assert!(index.categories.contains_key("LogWindows"));
-        assert!(index.level_counts.contains_key("Error"));
-        assert!(index.level_counts.contains_key("Warning"));
+        assert!(index.level_counts.contains_key("error"));
+        assert!(index.level_counts.contains_key("warning"));
 
         Ok(())
     }

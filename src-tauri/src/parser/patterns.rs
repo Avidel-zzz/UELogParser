@@ -50,7 +50,7 @@ pub static EXTRACT_CATEGORY: Lazy<Regex> = Lazy::new(|| {
 
 /// 详细级别提取
 pub static EXTRACT_LEVEL: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r":(Error|Warning|Display|Verbose|VeryVerbose):")
+    Regex::new(r":\s*(Error|Warning|Display|Verbose|VeryVerbose):")
         .expect("Invalid level extract pattern")
 });
 

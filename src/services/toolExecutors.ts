@@ -1,7 +1,6 @@
 //! AI 工具执行器
 
 import * as tauriApi from './tauriApi';
-import type { LogEntry } from '../types/log';
 
 /// 工具执行结果
 export interface ToolResult {

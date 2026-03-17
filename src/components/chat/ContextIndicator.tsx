@@ -3,7 +3,7 @@
 import { useChatStore } from '../../stores/chatStore';
 
 export function ContextIndicator() {
-  const { attachedLines, visibleLineRange } = useChatStore();
+  const { attachedLines } = useChatStore();
 
   if (attachedLines.length === 0) {
     return (

@@ -1,6 +1,6 @@
 //! AI API 服务层
 
-import type { AIProvider, ChatMessage, ToolCallResult } from '../types/ai';
+import type { AIProvider, ChatMessage } from '../types/ai';
 
 /// 工具定义
 interface ToolDefinition {
@@ -10,7 +10,10 @@ interface ToolDefinition {
     type: 'object';
     properties: Record<string, {
       type: string;
-      description: string;
+      description?: string;
+      items?: {
+        type: string;
+      };
     }>;
     required?: string[];
   };

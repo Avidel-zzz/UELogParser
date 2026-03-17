@@ -1,6 +1,7 @@
 //! 聊天输入组件
 
-import { useState, useCallback, KeyboardEvent } from 'react';
+import { useState, useCallback } from 'react';
+import type { KeyboardEvent } from 'react';
 import { useChatStore } from '../../stores/chatStore';
 
 interface ChatInputProps {

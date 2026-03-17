@@ -10,7 +10,6 @@ interface ChatMessageProps {
 
 export const ChatMessage = memo(function ChatMessage({ message, onJumpToLine }: ChatMessageProps) {
   const isUser = message.role === 'user';
-  const isAssistant = message.role === 'assistant';
 
   // Parse line number references (e.g., "line 1234")
   const renderContent = (content: string) => {

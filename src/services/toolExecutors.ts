@@ -1,6 +1,7 @@
 //! AI 工具执行器
 
 import * as tauriApi from './tauriApi';
+import type { LogLevel } from '../types/log';
 
 /// 工具执行结果
 export interface ToolResult {
@@ -110,7 +111,7 @@ export async function executeGetFilteredLines(
 ): Promise<ToolResult> {
   try {
     const result = await tauriApi.getFilteredLines(
-      levels as tauriApi.LogLevel[] || [],
+      levels as LogLevel[] || [],
       categories || []
     );
 

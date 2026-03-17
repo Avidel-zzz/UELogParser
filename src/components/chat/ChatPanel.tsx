@@ -20,11 +20,9 @@ export function ChatPanel() {
     isLoading,
     error,
     addMessage,
-    updateMessage,
     setLoading,
     setError,
     attachedLines,
-    clearMessages,
     saveSession,
     loadSession,
   } = useChatStore();

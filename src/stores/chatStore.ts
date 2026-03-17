@@ -47,7 +47,7 @@ export const useChatStore = create<ChatState>()(
       addMessage: (message) => {
         const newMessage: ChatMessage = {
           ...message,
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
           timestamp: Date.now(),
         };
         set((state) => ({ messages: [...state.messages, newMessage] }));

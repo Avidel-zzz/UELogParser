@@ -395,6 +395,13 @@ export function LogViewer() {
       }
     } else {
       handleVisibleRangeChange(first, last);
+
+      // Dispatch visible range for AI Chat context
+      const visibleFirst = first + 1;  // 1-based
+      const visibleLast = last + 1;
+      window.dispatchEvent(new CustomEvent('visiblerangechange', {
+        detail: { start: visibleFirst, end: visibleLast }
+      }));
     }
   }, [virtualItems, handleVisibleRangeChange, effectiveShowFiltered, effectiveShowSearch, uniqueSearchLines, filteredLines, ensureRangeLoaded]);
 

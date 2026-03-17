@@ -1,6 +1,6 @@
 //! 设置弹窗组件
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { CLAUDE_MODELS, GLM_MODELS } from '../../types/ai';
 
@@ -19,17 +19,37 @@ export function SettingsModal() {
   const [showClaudeKey, setShowClaudeKey] = useState(false);
   const [showGlmKey, setShowGlmKey] = useState(false);
 
-  if (!showSettings) return null;
+  const handleClose = useCallback(() => setShowSettings(false), [setShowSettings]);
 
-  const handleClose = () => setShowSettings(false);
+  // Handle Escape key to close modal
+  useEffect(() => {
+    if (!showSettings) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSettings, handleClose]);
+
+  if (!showSettings) return null;
 
   const handleSave = () => {
     setShowSettings(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg shadow-xl w-[480px] max-h-[80vh] overflow-hidden">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={handleClose}
+    >
+      <div
+        className="bg-gray-800 rounded-lg shadow-xl w-[480px] max-h-[80vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
           <h2 className="text-base font-semibold">Settings</h2>

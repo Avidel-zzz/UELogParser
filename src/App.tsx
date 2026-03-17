@@ -1,15 +1,22 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useLogStore } from './stores/logStore';
+import { useSettingsStore } from './stores/settingsStore';
+import { useChatStore } from './stores/chatStore';
 import { SearchBar } from './components/search/SearchBar';
 import { FilterPanel } from './components/filter/FilterPanel';
 import { LogViewer } from './components/viewer/LogViewer';
 import { ResizablePanel } from './components/ResizablePanel';
+import { ChatPanel } from './components/chat/ChatPanel';
+import { SettingsModal } from './components/settings/SettingsModal';
 
 /// Main application
 function App() {
   const { openFile, closeFile, fileIndex, isLoading, error, fontSize } = useLogStore();
+  const { showChat, setShowChat, chatWidth, setChatWidth, setShowSettings } = useSettingsStore();
+  const { setVisibleLineRange } = useChatStore();
   const [showFilter, setShowFilter] = useState(true);
+  const [isDraggingChat, setIsDraggingChat] = useState(false);
 
   const handleOpenFile = useCallback(async () => {
     try {
@@ -28,6 +35,15 @@ function App() {
       console.error('Failed to open file:', e);
     }
   }, [openFile]);
+
+  // Listen for visible range changes from LogViewer
+  useEffect(() => {
+    const handleVisibleRange = (e: CustomEvent<{ start: number; end: number }>) => {
+      setVisibleLineRange(e.detail.start, e.detail.end);
+    };
+    window.addEventListener('visiblerangechange', handleVisibleRange as EventListener);
+    return () => window.removeEventListener('visiblerangechange', handleVisibleRange as EventListener);
+  }, [setVisibleLineRange]);
 
   return (
     <div
@@ -70,6 +86,21 @@ function App() {
           >
             Filter
           </button>
+          <button
+            onClick={() => setShowChat(!showChat)}
+            className={`px-4 py-1.5 rounded text-white border-none cursor-pointer ${
+              showChat ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-500'
+            }`}
+          >
+            AI Chat
+          </button>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white border-none cursor-pointer"
+            title="Settings"
+          >
+            Settings
+          </button>
         </div>
       </header>
 
@@ -78,16 +109,59 @@ function App() {
 
       {/* Main Content */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        {showFilter && fileIndex ? (
-          <ResizablePanel
-            leftPanel={<FilterPanel />}
-            rightPanel={<LogViewer />}
-            initialLeftWidth={256}
-            minWidth={150}
-            maxWidth={500}
-          />
-        ) : (
-          <LogViewer />
+        {/* Left: Filter + LogViewer */}
+        <div className="flex-1 min-h-0 flex overflow-hidden">
+          {showFilter && fileIndex ? (
+            <ResizablePanel
+              leftPanel={<FilterPanel />}
+              rightPanel={<LogViewer />}
+              initialLeftWidth={256}
+              minWidth={150}
+              maxWidth={500}
+            />
+          ) : (
+            <LogViewer />
+          )}
+        </div>
+
+        {/* Right: AI Chat */}
+        {showChat && (
+          <>
+            {/* Resize Handle */}
+            <div
+              className={`w-1 bg-gray-700 hover:bg-blue-500 cursor-col-resize flex-shrink-0 transition-colors duration-150 ${
+                isDraggingChat ? 'bg-blue-500' : ''
+              }`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsDraggingChat(true);
+                const startX = e.clientX;
+                const startWidth = chatWidth;
+
+                const handleMouseMove = (e: MouseEvent) => {
+                  const delta = startX - e.clientX;
+                  const newWidth = Math.min(500, Math.max(250, startWidth + delta));
+                  setChatWidth(newWidth);
+                };
+
+                const handleMouseUp = () => {
+                  setIsDraggingChat(false);
+                  document.removeEventListener('mousemove', handleMouseMove);
+                  document.removeEventListener('mouseup', handleMouseUp);
+                  document.body.style.cursor = '';
+                  document.body.style.userSelect = '';
+                };
+
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+              }}
+            />
+            <div style={{ width: chatWidth }} className="h-full flex-shrink-0">
+              <ChatPanel />
+            </div>
+          </>
         )}
       </div>
 
@@ -96,6 +170,9 @@ function App() {
         <span>{error ? `Error: ${error}` : 'Ready'}</span>
         <span>Press F3 or Shift+F3 to navigate search results</span>
       </footer>
+
+      {/* Settings Modal */}
+      <SettingsModal />
     </div>
   );
 }

@@ -1,0 +1,44 @@
+<h2>AI聊天侧边栏 - 实现方案</h2>
+<p class="subtitle">选择你喜欢的侧边栏交互方式</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>独立右侧边栏</h3>
+      <p>AI聊天面板作为独立的右侧边栏，与左侧Filter面板对称。设置内嵌在聊天面板顶部。简单直接，不改变现有布局。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>实现简单</li><li>不影响现有Filter面板</li><li>清晰的功能分离</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>无法放到左侧</li><li>两侧面板同时打开时主内容区较窄</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>可拖拽位置侧边栏</h3>
+      <p>AI聊天面板可以通过拖拽放到左侧或右侧。放到左侧时与Filter面板共存（上下或标签切换）。灵活但实现复杂。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>最大灵活性</li><li>用户自定义布局</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>实现复杂度高</li><li>需要处理面板冲突</li><li>UI状态管理复杂</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>右侧面板 + 位置切换按钮</h3>
+      <p>默认右侧，但提供切换按钮可以移到左侧。在左侧时与Filter面板通过标签页共享空间（Filter/AI两个标签）。平衡灵活性和实现复杂度。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优点</h4><ul><li>合理的灵活性</li><li>标签切换简单直观</li><li>避免面板冲突</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>左侧时需要切换标签</li><li>不能同时看到Filter和AI</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top: 20px; color: #888; font-size: 14px;">
+  <strong>我的推荐：方案 A</strong> - 实现简单，功能清晰。如果后续需要可以再扩展位置切换功能。
+</p>

@@ -1,4 +1,4 @@
-//! 虚拟滚动日志列表
+//! 虚拟滚动日志列表 - Apple 风格扁平设计
 
 import { useRef, useCallback, useEffect, memo, useState, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -19,6 +19,15 @@ const PRESET_COLORS = [
   { name: 'Red', color: '#ef4444' },
   { name: 'Purple', color: '#a855f7' },
 ];
+
+const LEVEL_COLORS: Record<string, string> = {
+  error: '#ef4444',
+  warning: '#f97316',
+  display: '#3b82f6',
+  verbose: '#6b7280',
+  veryverbose: '#4b5563',
+  unknown: '#9ca3af',
+};
 
 /// 右键菜单
 function ContextMenu({
@@ -42,93 +51,127 @@ function ContextMenu({
   }, [onClose]);
 
   return (
-    <div
-      className="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 min-w-[180px]"
-      style={{ left: x, top: y }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="p-2 border-b border-gray-700 text-xs text-gray-400 truncate">
-        "{selectedText.slice(0, 30)}{selectedText.length > 30 ? '...' : ''}"
+    <div className="context-menu" style={{ left: x, top: y }} onClick={(e) => e.stopPropagation()}>
+      <div className="context-menu-header">
+        <span className="context-menu-preview">"{selectedText.slice(0, 30)}{selectedText.length > 30 ? '...' : ''}"</span>
       </div>
 
       {!showColorPicker ? (
-        <button
-          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 flex items-center gap-2"
-          onClick={() => setShowColorPicker(true)}
-        >
-          <span>🎨</span> Add Highlight Rule
+        <button className="context-menu-item" onClick={() => setShowColorPicker(true)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="13.5" cy="6.5" r="2.5" />
+            <circle cx="17.5" cy="10.5" r="2.5" />
+            <circle cx="8.5" cy="7.5" r="2.5" />
+            <circle cx="6.5" cy="12.5" r="2.5" />
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
+          </svg>
+          <span>Add Highlight</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="context-menu-arrow">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
         </button>
       ) : (
-        <div className="p-2">
-          <div className="text-xs text-gray-400 mb-2">Select color:</div>
-          <div className="grid grid-cols-4 gap-1">
-            {PRESET_COLORS.map((c) => (
-              <button
-                key={c.color}
-                className="w-8 h-8 rounded border-2 border-transparent hover:border-white"
-                style={{ backgroundColor: c.color }}
-                onClick={() => {
-                  onAddHighlight(selectedText, c.color);
-                  onClose();
-                }}
-                title={c.name}
-              />
-            ))}
-          </div>
+        <div className="context-menu-colors">
+          {PRESET_COLORS.map((c) => (
+            <button
+              key={c.color}
+              className="context-menu-color-btn"
+              style={{ backgroundColor: c.color }}
+              onClick={() => {
+                onAddHighlight(selectedText, c.color);
+                onClose();
+              }}
+              title={c.name}
+            />
+          ))}
         </div>
       )}
 
-      <button
-        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 text-gray-400"
-        onClick={() => {
-          navigator.clipboard.writeText(selectedText);
-          onClose();
-        }}
-      >
-        📋 Copy
+      <div className="context-menu-divider" />
+
+      <button className="context-menu-item" onClick={() => {
+        navigator.clipboard.writeText(selectedText);
+        onClose();
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+        <span>Copy</span>
       </button>
     </div>
   );
 }
 
-/// 高亮规则面板
-function HighlightRulesPanel({
-  rules,
-  onRemove,
-  onToggle,
-}: {
-  rules: HighlightRule[];
-  onRemove: (id: string) => void;
-  onToggle: (id: string) => void;
-}) {
-  if (rules.length === 0) return null;
+/// 设置面板
+function SettingsPanel({ onClose }: { onClose: () => void }) {
+  const { fontSize, setFontSize, highlightColor, setHighlightColor, highlightRules, removeHighlightRule, toggleHighlightRule } = useLogStore();
 
   return (
-    <div className="border-t border-gray-700 p-2">
-      <div className="text-xs text-gray-400 mb-2">Custom Highlights ({rules.length})</div>
-      <div className="space-y-1 max-h-32 overflow-auto">
-        {rules.map((rule) => (
-          <div key={rule.id} className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              checked={rule.enabled}
-              onChange={() => onToggle(rule.id)}
-              className="w-3 h-3"
-            />
-            <span
-              className="w-3 h-3 rounded"
-              style={{ backgroundColor: rule.color }}
-            />
-            <span className="flex-1 truncate text-gray-300">{rule.pattern}</span>
-            <button
-              onClick={() => onRemove(rule.id)}
-              className="text-gray-500 hover:text-red-400"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
+    <div className="settings-panel">
+      <div className="settings-panel-header">
+        <h3>Display Settings</h3>
+        <button onClick={onClose} className="settings-panel-close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
       </div>
+
+      {/* 字体大小 */}
+      <div className="settings-section">
+        <label className="settings-label">Font Size: {fontSize}px</label>
+        <input
+          type="range"
+          min="10"
+          max="20"
+          value={fontSize}
+          onChange={(e) => setFontSize(Number(e.target.value))}
+          className="settings-slider"
+        />
+      </div>
+
+      {/* 搜索高亮颜色 */}
+      <div className="settings-section">
+        <label className="settings-label">Search Highlight</label>
+        <div className="settings-colors">
+          {PRESET_COLORS.map((c) => (
+            <button
+              key={c.color}
+              className={`settings-color-btn ${highlightColor === c.color ? 'active' : ''}`}
+              style={{ backgroundColor: c.color }}
+              onClick={() => setHighlightColor(c.color)}
+              title={c.name}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* 自定义高亮规则 */}
+      {highlightRules.length > 0 && (
+        <div className="settings-section">
+          <label className="settings-label">Custom Highlights ({highlightRules.length})</label>
+          <div className="settings-rules">
+            {highlightRules.map((rule) => (
+              <div key={rule.id} className="settings-rule">
+                <input
+                  type="checkbox"
+                  checked={rule.enabled}
+                  onChange={() => toggleHighlightRule(rule.id)}
+                  className="settings-rule-check"
+                />
+                <span className="settings-rule-dot" style={{ backgroundColor: rule.color }} />
+                <span className="settings-rule-pattern">{rule.pattern}</span>
+                <button onClick={() => removeHighlightRule(rule.id)} className="settings-rule-remove">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -150,46 +193,28 @@ const LogLine = memo(function LogLine({
   onContextMenu: (e: React.MouseEvent, text: string) => void;
 }) {
   const segments = useHighlight(entry.raw, searchResults, entry.line_number, highlightRules);
-
-  const levelClass = entry.level === 'error'
-    ? 'error'
-    : entry.level === 'warning'
-    ? 'warning'
-    : entry.level === 'display'
-    ? 'display'
-    : '';
-
-  const currentHighlight = isCurrentSearch ? 'ring-2 ring-yellow-400 bg-yellow-900/20' : '';
+  const levelColor = LEVEL_COLORS[entry.level] || LEVEL_COLORS.unknown;
 
   return (
     <div
-      className={`log-line ${levelClass} ${currentHighlight}`}
+      className={`log-line ${isCurrentSearch ? 'current-search' : ''}`}
       onContextMenu={(e) => onContextMenu(e, entry.raw)}
     >
-      <span className="text-gray-500 mr-3 select-none min-w-[60px] inline-block text-right">
-        {entry.line_number.toString().padStart(6, ' ')}
-      </span>
-      <span className="flex-1">
+      <div className="log-line-indicator" style={{ backgroundColor: levelColor }} />
+      <span className="log-line-number">{entry.line_number}</span>
+      <span className="log-line-content">
         {segments.map((seg, i) =>
           seg.isHighlight ? (
             <span
               key={i}
               style={
                 seg.type === 'search'
-                  ? { backgroundColor: highlightColor + '40', color: highlightColor }
+                  ? { backgroundColor: highlightColor + '30', color: highlightColor }
                   : seg.type === 'custom' && seg.color
-                  ? { backgroundColor: seg.color + '30', color: seg.color }
+                  ? { backgroundColor: seg.color + '25', color: seg.color }
                   : undefined
               }
-              className={
-                seg.type === 'search' || seg.type === 'custom'
-                  ? ''
-                  : seg.type === 'path'
-                  ? 'highlight-path'
-                  : seg.type === 'uuid'
-                  ? 'highlight-uuid'
-                  : 'highlight-number'
-              }
+              className={`log-highlight ${seg.type === 'search' ? 'search' : seg.type === 'custom' ? 'custom' : ''}`}
             >
               {seg.text}
             </span>
@@ -202,117 +227,11 @@ const LogLine = memo(function LogLine({
   );
 });
 
-/// 搜索结果面板
-function SearchResultsPanel({
-  width,
-  onClose,
-  onJumpToLine,
-}: {
-  width: number;
-  onClose: () => void;
-  onJumpToLine: (line: number) => void;
-}) {
-  const { searchResults, currentSearchIndex, entriesMap } = useLogStore();
-
-  return (
-    <div style={{ width }} className="h-full bg-gray-800 border-l border-gray-700 flex flex-col flex-shrink-0">
-      <div className="p-2 border-b border-gray-700 flex items-center justify-between">
-        <span className="text-sm font-medium">
-          Search Results ({searchResults.length})
-        </span>
-        <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
-      </div>
-      <div className="flex-1 min-h-0 overflow-auto">
-        {searchResults.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">
-            No search results
-          </div>
-        ) : (
-          searchResults.map((result, idx) => {
-            const entry = entriesMap[result.line_number];
-            return (
-              <div
-                key={`${result.line_number}-${result.start}`}
-                className={`px-3 py-2 border-b border-gray-700 cursor-pointer hover:bg-gray-700 ${
-                  idx === currentSearchIndex ? 'bg-blue-900/30' : ''
-                }`}
-                onClick={() => onJumpToLine(result.line_number)}
-              >
-                <div className="text-xs text-gray-400 mb-1">
-                  Line {result.line_number}
-                </div>
-                <div className="text-sm truncate">
-                  {entry?.raw || result.matched_text}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-}
-
-/// 设置面板
-function SettingsPanel({ onClose }: { onClose: () => void }) {
-  const { fontSize, setFontSize, highlightColor, setHighlightColor, highlightRules, removeHighlightRule, toggleHighlightRule } = useLogStore();
-
-  return (
-    <div className="absolute top-10 right-2 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 min-w-[220px]">
-      <div className="flex justify-between items-center p-3 border-b border-gray-700">
-        <h3 className="text-sm font-semibold">Settings</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
-      </div>
-
-      {/* 字体大小 */}
-      <div className="p-3 border-b border-gray-700">
-        <label className="text-xs text-gray-400 block mb-1">Font Size: {fontSize}px</label>
-        <input
-          type="range"
-          min="8"
-          max="24"
-          value={fontSize}
-          onChange={(e) => setFontSize(Number(e.target.value))}
-          className="w-full"
-        />
-      </div>
-
-      {/* 搜索高亮颜色 */}
-      <div className="p-3 border-b border-gray-700">
-        <label className="text-xs text-gray-400 block mb-2">Search Highlight</label>
-        <div className="flex flex-wrap gap-1">
-          {PRESET_COLORS.map((c) => (
-            <button
-              key={c.color}
-              className={`w-6 h-6 rounded border-2 ${
-                highlightColor === c.color ? 'border-white' : 'border-transparent'
-              }`}
-              style={{ backgroundColor: c.color }}
-              onClick={() => setHighlightColor(c.color)}
-              title={c.name}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* 自定义高亮规则 */}
-      <HighlightRulesPanel
-        rules={highlightRules}
-        onRemove={removeHighlightRule}
-        onToggle={toggleHighlightRule}
-      />
-    </div>
-  );
-}
-
 /// 日志查看器
 export function LogViewer() {
   const parentRef = useRef<HTMLDivElement>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [showSearchResults, setShowSearchResults] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
-  const [searchPanelWidth, setSearchPanelWidth] = useState(288);
-  const [isDraggingSearchPanel, setIsDraggingSearchPanel] = useState(false);
 
   const {
     entriesMap,
@@ -334,15 +253,13 @@ export function LogViewer() {
   const { handleVisibleRangeChange, scrollToLine, totalLines } = useLogStream();
 
   const currentSearchLine = searchResults[currentSearchIndex]?.line_number ?? -1;
-  const lineHeight = Math.max(16, fontSize + 4);
+  const lineHeight = Math.max(18, fontSize + 5);
 
-  // Determine which mode we're in and the virtual count
-  // Priority: showFilteredOnly > showSearchOnly > normal
+  // Determine which mode we're in
   const effectiveShowFiltered = showFilteredOnly && filteredLines.length > 0;
   const effectiveShowSearch = showSearchOnly && searchResults.length > 0 && !effectiveShowFiltered;
 
-  // Deduplicate search results by line_number for search-only mode
-  // (one line may have multiple matches, but we only show it once)
+  // Deduplicate search results by line_number
   const uniqueSearchLines = useMemo(() => {
     const seen = new Set<number>();
     const unique: number[] = [];
@@ -378,7 +295,6 @@ export function LogViewer() {
     const last = virtualItems[virtualItems.length - 1].index;
 
     if (effectiveShowFiltered) {
-      // In filtered-only mode, load the lines for visible filtered results
       const lineNumbers = virtualItems.map(item => filteredLines[item.index]).filter((n): n is number => n !== undefined);
       if (lineNumbers.length > 0) {
         const minLine = Math.min(...lineNumbers);
@@ -386,7 +302,6 @@ export function LogViewer() {
         ensureRangeLoaded(minLine, maxLine);
       }
     } else if (effectiveShowSearch) {
-      // In search-only mode, load the lines for visible search results
       const lineNumbers = virtualItems.map(item => uniqueSearchLines[item.index]).filter((n): n is number => n !== undefined);
       if (lineNumbers.length > 0) {
         const minLine = Math.min(...lineNumbers);
@@ -396,8 +311,7 @@ export function LogViewer() {
     } else {
       handleVisibleRangeChange(first, last);
 
-      // Dispatch visible range for AI Chat context
-      const visibleFirst = first + 1;  // 1-based
+      const visibleFirst = first + 1;
       const visibleLast = last + 1;
       window.dispatchEvent(new CustomEvent('visiblerangechange', {
         detail: { start: visibleFirst, end: visibleLast }
@@ -426,19 +340,16 @@ export function LogViewer() {
   useEffect(() => {
     if (currentSearchIndex >= 0 && searchResults.length > 0 && currentSearchLine > 0) {
       if (effectiveShowSearch) {
-        // In search-only mode, find the index in uniqueSearchLines
         const idx = uniqueSearchLines.indexOf(currentSearchLine);
         if (idx >= 0) {
           virtualizer.scrollToIndex(idx, { align: 'center' });
         }
       } else if (effectiveShowFiltered) {
-        // In filtered mode, find the index in filteredLines
         const idx = filteredLines.indexOf(currentSearchLine);
         if (idx >= 0) {
           virtualizer.scrollToIndex(idx, { align: 'center' });
         }
       } else {
-        // In normal mode, scroll to the line number
         virtualizer.scrollToIndex(currentSearchLine - 1, { align: 'center' });
         scrollToLine(currentSearchLine);
       }
@@ -448,8 +359,6 @@ export function LogViewer() {
   // 右键菜单处理
   const handleContextMenu = useCallback((e: React.MouseEvent, text: string) => {
     e.preventDefault();
-
-    // 获取选中的文本
     const selection = window.getSelection();
     const selectedText = (selection?.toString().trim() || text.slice(0, 50)) || '';
 
@@ -460,138 +369,119 @@ export function LogViewer() {
     });
   }, []);
 
-  // 跳转到指定行
-  const handleJumpToLine = useCallback((lineNumber: number) => {
-    if (effectiveShowSearch) {
-      // In search-only mode, find the index in uniqueSearchLines
-      const idx = uniqueSearchLines.indexOf(lineNumber);
-      if (idx >= 0) {
-        virtualizer.scrollToIndex(idx, { align: 'center' });
-      }
-    } else if (effectiveShowFiltered) {
-      // In filtered-only mode, find the index in filteredLines
-      const idx = filteredLines.indexOf(lineNumber);
-      if (idx >= 0) {
-        virtualizer.scrollToIndex(idx, { align: 'center' });
-      }
-    } else {
-      virtualizer.scrollToIndex(lineNumber - 1, { align: 'center' });
-      scrollToLine(lineNumber);
-    }
-  }, [virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, uniqueSearchLines, filteredLines]);
-
   if (!fileIndex) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500 bg-gray-900">
-        <div className="text-center">
-          <p className="text-lg mb-2">No log file opened</p>
-          <p className="text-sm">Click "Open File" to load a log file</p>
+      <div className="log-viewer-empty">
+        <div className="log-viewer-empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <line x1="10" y1="9" x2="8" y2="9" />
+          </svg>
         </div>
+        <p className="log-viewer-empty-title">No Log File</p>
+        <p className="log-viewer-empty-hint">Click "Open" to load a log file</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex overflow-hidden relative bg-gray-900">
-      {/* 日志列表 */}
-      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
-        {/* 工具栏 */}
-        <div className="flex items-center justify-between px-2 py-1 bg-gray-800 border-b border-gray-700 text-xs">
-          <div className="text-gray-400">
-            {effectiveShowFiltered ? (
-              <span className="text-green-400">
-                🔽 Filtered: {filteredLines.length.toLocaleString()} matching lines
-              </span>
-            ) : effectiveShowSearch ? (
-              <span className="text-blue-400">
-                🔍 Search: {uniqueSearchLines.length.toLocaleString()} matching lines ({searchResults.length.toLocaleString()} matches)
-              </span>
-            ) : (
-              <span>{totalLines.toLocaleString()} lines</span>
-            )}
-            {searchResults.length > 0 && !effectiveShowFiltered && (
-              <button
-                className="ml-4 text-blue-400 hover:text-blue-300"
-                onClick={() => setShowSearchResults(!showSearchResults)}
-              >
-                Search: {currentSearchIndex + 1}/{searchResults.length} matches ▶
+    <div className="log-viewer">
+      {/* 工具栏 */}
+      <div className="log-toolbar">
+        <div className="log-toolbar-left">
+          {effectiveShowFiltered ? (
+            <span className="log-status filtered">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              {filteredLines.length.toLocaleString()} filtered
+            </span>
+          ) : effectiveShowSearch ? (
+            <span className="log-status search">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              {uniqueSearchLines.length.toLocaleString()} matches
+            </span>
+          ) : (
+            <span className="log-status">
+              {totalLines.toLocaleString()} lines
+            </span>
+          )}
+
+          {searchResults.length > 0 && !effectiveShowFiltered && (
+            <span className="log-search-nav">
+              <button onClick={prevSearchResult} title="Previous (Shift+F3)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 15l-6-6-6 6" />
+                </svg>
               </button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {highlightRules.length > 0 && (
-              <span className="text-gray-500">
-                🎨 {highlightRules.filter(r => r.enabled).length}
-              </span>
-            )}
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
-            >
-              ⚙ Settings
-            </button>
-          </div>
+              <span>{currentSearchIndex + 1}/{searchResults.length}</span>
+              <button onClick={nextSearchResult} title="Next (F3)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            </span>
+          )}
         </div>
 
-        {/* 日志列表 */}
+        <div className="log-toolbar-right">
+          {highlightRules.length > 0 && (
+            <span className="log-highlights-count" title="Custom highlights">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="13.5" cy="6.5" r="2.5" />
+                <circle cx="17.5" cy="10.5" r="2.5" />
+                <circle cx="8.5" cy="7.5" r="2.5" />
+                <circle cx="6.5" cy="12.5" r="2.5" />
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
+              </svg>
+              {highlightRules.filter(r => r.enabled).length}
+            </span>
+          )}
+          <button className="log-settings-btn" onClick={() => setShowSettings(!showSettings)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* 日志列表 */}
+      <div
+        ref={parentRef}
+        className="log-content"
+        style={{ fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` }}
+      >
         <div
-          ref={parentRef}
-          className="flex-1 min-h-0 overflow-auto bg-gray-900"
-          style={{ fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` }}
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
         >
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: '100%',
-              position: 'relative',
-            }}
-          >
-            {virtualItems.map((virtualItem) => {
-              // Determine line number based on mode
-              let lineNumber: number;
-              if (effectiveShowFiltered) {
-                lineNumber = filteredLines[virtualItem.index] ?? 0;
-              } else if (effectiveShowSearch) {
-                lineNumber = uniqueSearchLines[virtualItem.index] ?? 0;
-              } else {
-                lineNumber = virtualItem.index + 1;
-              }
-              
-              const entry = entriesMap[lineNumber];
+          {virtualItems.map((virtualItem) => {
+            let lineNumber: number;
+            if (effectiveShowFiltered) {
+              lineNumber = filteredLines[virtualItem.index] ?? 0;
+            } else if (effectiveShowSearch) {
+              lineNumber = uniqueSearchLines[virtualItem.index] ?? 0;
+            } else {
+              lineNumber = virtualItem.index + 1;
+            }
 
-              if (!entry) {
-                return (
-                  <div
-                    key={virtualItem.key}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                    className="px-2 py-0.5 text-gray-600 italic"
-                  >
-                    <span className="text-gray-500 mr-3 min-w-[60px] inline-block text-right">
-                      {lineNumber.toString().padStart(6, ' ')}
-                    </span>
-                    Loading...
-                  </div>
-                );
-              }
+            const entry = entriesMap[lineNumber];
 
-              // In filtered-only mode, we don't apply passesFilter since we already have filtered lines
-              // In normal mode, apply the filter
-              if (!effectiveShowFiltered && !passesFilter(entry, filterState)) {
-                return null;
-              }
-
-              const isCurrentSearch = lineNumber === currentSearchLine;
-
+            if (!entry) {
               return (
                 <div
                   key={virtualItem.key}
+                  className="log-line loading"
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -601,62 +491,44 @@ export function LogViewer() {
                     transform: `translateY(${virtualItem.start}px)`,
                   }}
                 >
-                  <LogLine
-                    entry={entry}
-                    searchResults={searchResults}
-                    isCurrentSearch={isCurrentSearch}
-                    highlightColor={highlightColor}
-                    highlightRules={highlightRules}
-                    onContextMenu={handleContextMenu}
-                  />
+                  <div className="log-line-indicator" style={{ backgroundColor: '#4b5563' }} />
+                  <span className="log-line-number">{lineNumber}</span>
+                  <span className="log-line-content loading-text">Loading...</span>
                 </div>
               );
-            })}
-          </div>
+            }
+
+            if (!effectiveShowFiltered && !passesFilter(entry, filterState)) {
+              return null;
+            }
+
+            const isCurrentSearch = lineNumber === currentSearchLine;
+
+            return (
+              <div
+                key={virtualItem.key}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualItem.size}px`,
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <LogLine
+                  entry={entry}
+                  searchResults={searchResults}
+                  isCurrentSearch={isCurrentSearch}
+                  highlightColor={highlightColor}
+                  highlightRules={highlightRules}
+                  onContextMenu={handleContextMenu}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
-
-      {/* 搜索结果面板 */}
-      {showSearchResults && searchResults.length > 0 && (
-        <>
-          {/* Resize Handle */}
-          <div
-            className={`w-1 bg-gray-700 hover:bg-blue-500 cursor-col-resize flex-shrink-0 transition-colors duration-150 ${
-              isDraggingSearchPanel ? 'bg-blue-500' : ''
-            }`}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              setIsDraggingSearchPanel(true);
-              const startX = e.clientX;
-              const startWidth = searchPanelWidth;
-
-              const handleMouseMove = (e: MouseEvent) => {
-                const delta = startX - e.clientX;
-                const newWidth = Math.min(400, Math.max(150, startWidth + delta));
-                setSearchPanelWidth(newWidth);
-              };
-
-              const handleMouseUp = () => {
-                setIsDraggingSearchPanel(false);
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-              };
-
-              document.addEventListener('mousemove', handleMouseMove);
-              document.addEventListener('mouseup', handleMouseUp);
-              document.body.style.cursor = 'col-resize';
-              document.body.style.userSelect = 'none';
-            }}
-          />
-          <SearchResultsPanel
-            width={searchPanelWidth}
-            onClose={() => setShowSearchResults(false)}
-            onJumpToLine={handleJumpToLine}
-          />
-        </>
-      )}
 
       {/* 设置面板 */}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
@@ -673,6 +545,441 @@ export function LogViewer() {
           }}
         />
       )}
+
+      <style>{`
+        .log-viewer {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          background: #0d0d0d;
+          overflow: hidden;
+          position: relative;
+        }
+
+        .log-viewer-empty {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #0d0d0d;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .log-viewer-empty-icon {
+          margin-bottom: 16px;
+          color: rgba(255, 255, 255, 0.2);
+        }
+
+        .log-viewer-empty-title {
+          font-size: 16px;
+          font-weight: 500;
+          margin: 0 0 8px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .log-viewer-empty-hint {
+          font-size: 13px;
+          margin: 0;
+        }
+
+        /* Toolbar */
+        .log-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 6px 12px;
+          background: rgba(30, 30, 30, 0.95);
+          backdrop-filter: blur(10px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          flex-shrink: 0;
+        }
+
+        .log-toolbar-left, .log-toolbar-right {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .log-status {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .log-status svg {
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .log-status.filtered {
+          color: rgba(34, 197, 94, 0.8);
+        }
+
+        .log-status.filtered svg {
+          color: rgba(34, 197, 94, 0.8);
+        }
+
+        .log-status.search {
+          color: rgba(59, 130, 246, 0.8);
+        }
+
+        .log-status.search svg {
+          color: rgba(59, 130, 246, 0.8);
+        }
+
+        .log-search-nav {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .log-search-nav button {
+          background: rgba(255, 255, 255, 0.08);
+          border: none;
+          padding: 4px 6px;
+          border-radius: 4px;
+          color: rgba(255, 255, 255, 0.6);
+          cursor: pointer;
+          display: flex;
+          transition: all 0.15s;
+        }
+
+        .log-search-nav button:hover {
+          background: rgba(255, 255, 255, 0.15);
+          color: white;
+        }
+
+        .log-highlights-count {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .log-settings-btn {
+          background: transparent;
+          border: none;
+          padding: 6px 8px;
+          border-radius: 6px;
+          color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          display: flex;
+          transition: all 0.15s;
+        }
+
+        .log-settings-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Log Content */
+        .log-content {
+          flex: 1;
+          min-height: 0;
+          overflow: auto;
+          font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+        }
+
+        /* Log Line */
+        .log-line {
+          display: flex;
+          align-items: center;
+          padding: 0 8px;
+          border-left: 2px solid transparent;
+          transition: background 0.1s;
+        }
+
+        .log-line:hover {
+          background: rgba(255, 255, 255, 0.03);
+        }
+
+        .log-line.current-search {
+          background: rgba(251, 191, 36, 0.1);
+        }
+
+        .log-line.current-search .log-line-indicator {
+          box-shadow: 0 0 8px currentColor;
+        }
+
+        .log-line-indicator {
+          width: 3px;
+          height: 100%;
+          min-height: 14px;
+          flex-shrink: 0;
+          margin-right: 8px;
+          border-radius: 0 2px 2px 0;
+        }
+
+        .log-line-number {
+          min-width: 50px;
+          text-align: right;
+          color: rgba(255, 255, 255, 0.25);
+          font-variant-numeric: tabular-nums;
+          padding-right: 12px;
+          user-select: none;
+          flex-shrink: 0;
+        }
+
+        .log-line-content {
+          flex: 1;
+          white-space: pre;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          color: rgba(255, 255, 255, 0.85);
+        }
+
+        .log-line-content.loading-text {
+          color: rgba(255, 255, 255, 0.3);
+          font-style: italic;
+        }
+
+        .log-highlight {
+          border-radius: 2px;
+          padding: 0 1px;
+        }
+
+        /* Context Menu */
+        .context-menu {
+          position: fixed;
+          background: rgba(40, 40, 40, 0.98);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+          z-index: 1000;
+          min-width: 180px;
+          padding: 4px;
+        }
+
+        .context-menu-header {
+          padding: 8px 10px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          margin-bottom: 4px;
+        }
+
+        .context-menu-preview {
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .context-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          padding: 8px 10px;
+          background: transparent;
+          border: none;
+          border-radius: 6px;
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 13px;
+          text-align: left;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+
+        .context-menu-item:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+
+        .context-menu-item svg {
+          color: rgba(255, 255, 255, 0.5);
+        }
+
+        .context-menu-arrow {
+          margin-left: auto;
+        }
+
+        .context-menu-divider {
+          height: 1px;
+          background: rgba(255, 255, 255, 0.08);
+          margin: 4px 0;
+        }
+
+        .context-menu-colors {
+          display: flex;
+          gap: 4px;
+          padding: 8px 10px;
+        }
+
+        .context-menu-color-btn {
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          border: 2px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .context-menu-color-btn:hover {
+          border-color: white;
+          transform: scale(1.1);
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+          position: absolute;
+          top: 40px;
+          right: 8px;
+          background: rgba(40, 40, 40, 0.98);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+          z-index: 100;
+          min-width: 240px;
+        }
+
+        .settings-panel-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .settings-panel-header h3 {
+          font-size: 13px;
+          font-weight: 600;
+          margin: 0;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .settings-panel-close {
+          background: transparent;
+          border: none;
+          padding: 4px;
+          border-radius: 4px;
+          color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          display: flex;
+          transition: all 0.15s;
+        }
+
+        .settings-panel-close:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+
+        .settings-section {
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .settings-section:last-child {
+          border-bottom: none;
+        }
+
+        .settings-label {
+          display: block;
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.5);
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .settings-slider {
+          width: 100%;
+          height: 4px;
+          border-radius: 2px;
+          background: rgba(255, 255, 255, 0.1);
+          appearance: none;
+          cursor: pointer;
+        }
+
+        .settings-slider::-webkit-slider-thumb {
+          appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: rgba(59, 130, 246, 0.8);
+          cursor: pointer;
+        }
+
+        .settings-colors {
+          display: flex;
+          gap: 6px;
+        }
+
+        .settings-color-btn {
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          border: 2px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .settings-color-btn:hover {
+          border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .settings-color-btn.active {
+          border-color: white;
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+
+        .settings-rules {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          max-height: 120px;
+          overflow-y: auto;
+        }
+
+        .settings-rule {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 8px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 6px;
+        }
+
+        .settings-rule-check {
+          width: 14px;
+          height: 14px;
+          accent-color: #3b82f6;
+        }
+
+        .settings-rule-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 3px;
+          flex-shrink: 0;
+        }
+
+        .settings-rule-pattern {
+          flex: 1;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.7);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .settings-rule-remove {
+          background: transparent;
+          border: none;
+          padding: 2px;
+          border-radius: 4px;
+          color: rgba(255, 255, 255, 0.3);
+          cursor: pointer;
+          display: flex;
+          transition: all 0.15s;
+        }
+
+        .settings-rule-remove:hover {
+          background: rgba(239, 68, 68, 0.2);
+          color: rgba(239, 68, 68, 0.8);
+        }
+      `}</style>
     </div>
   );
 }
@@ -682,21 +989,18 @@ function passesFilter(
   entry: { category?: string; level: string },
   filterState: { selectedLevels: Set<string>; selectedCategories: Set<string>; excludedCategories: Set<string> }
 ): boolean {
-  // 检查级别
   if (filterState.selectedLevels.size > 0) {
     if (!filterState.selectedLevels.has(entry.level)) {
       return false;
     }
   }
 
-  // 检查类别
   if (filterState.selectedCategories.size > 0) {
     if (!entry.category || !filterState.selectedCategories.has(entry.category)) {
       return false;
     }
   }
 
-  // 检查排除的类别
   if (entry.category && filterState.excludedCategories.has(entry.category)) {
     return false;
   }

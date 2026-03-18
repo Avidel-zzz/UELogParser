@@ -129,17 +129,35 @@ export function SettingsModal() {
                 <label className="block text-sm text-gray-400 mb-1">
                   Model
                 </label>
-                <select
-                  value={claude.model}
-                  onChange={(e) => setClaudeConfig({ model: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                >
-                  {CLAUDE_MODELS.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={CLAUDE_MODELS.includes(claude.model as typeof CLAUDE_MODELS[number]) ? claude.model : 'custom'}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        // Keep current value if switching to custom
+                      } else {
+                        setClaudeConfig({ model: e.target.value });
+                      }
+                    }}
+                    className="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {CLAUDE_MODELS.map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                    <option value="custom">Custom...</option>
+                  </select>
+                  {(!CLAUDE_MODELS.includes(claude.model as typeof CLAUDE_MODELS[number])) && (
+                    <input
+                      type="text"
+                      value={claude.model}
+                      onChange={(e) => setClaudeConfig({ model: e.target.value })}
+                      className="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                      placeholder="Enter custom model ID"
+                    />
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -186,17 +204,35 @@ export function SettingsModal() {
                 <label className="block text-sm text-gray-400 mb-1">
                   Model
                 </label>
-                <select
-                  value={glm.model}
-                  onChange={(e) => setGlmConfig({ model: e.target.value })}
-                  className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                >
-                  {GLM_MODELS.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={GLM_MODELS.includes(glm.model as typeof GLM_MODELS[number]) ? glm.model : 'custom'}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        // Keep current value if switching to custom
+                      } else {
+                        setGlmConfig({ model: e.target.value });
+                      }
+                    }}
+                    className="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    {GLM_MODELS.map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                    <option value="custom">Custom...</option>
+                  </select>
+                  {(!GLM_MODELS.includes(glm.model as typeof GLM_MODELS[number])) && (
+                    <input
+                      type="text"
+                      value={glm.model}
+                      onChange={(e) => setGlmConfig({ model: e.target.value })}
+                      className="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                      placeholder="Enter custom model ID"
+                    />
+                  )}
+                </div>
               </div>
             </div>
           )}

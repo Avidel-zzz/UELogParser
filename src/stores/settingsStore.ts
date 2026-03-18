@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AIProvider, ClaudeConfig, GlmConfig } from '../types/ai';
-import { CLAUDE_MODELS, GLM_MODELS } from '../types/ai';
 
 interface SettingsState {
   // AI 配置
@@ -36,12 +35,12 @@ export const useSettingsStore = create<SettingsState>()(
       claude: {
         apiKey: '',
         baseUrl: 'https://api.anthropic.com',
-        model: CLAUDE_MODELS[0],
+        model: 'claude-sonnet-4-20250514',
       },
       glm: {
         apiKey: '',
         baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-        model: GLM_MODELS[0],
+        model: 'glm-4-flash',
       },
       showChat: false,
       chatWidth: 320,

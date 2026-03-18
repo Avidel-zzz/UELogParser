@@ -29,6 +29,13 @@ export const GLM_MODELS = [
   'glm-4-plus',
   'glm-4-0520',
   'glm-4-flash',
+  'glm-4-air',
+  'glm-4-long',
+  'glm-4v-plus',
+  'glm-4v-0520',
+  'glm-4v-flash',
+  'glm-z1-airx',
+  'glm-z1-flash',
 ] as const;
 
 /// 聊天消息

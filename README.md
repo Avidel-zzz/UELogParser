@@ -1,9 +1,14 @@
+
 <div align="center">
 
 # UE Log Parser
 
 <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%20Linux-blue.svg" alt="Platform" />
-<img src="https://img.shields.io/badge/Tech-React%2019%20|%%20Rust%20|%%20Tauri%20v2-blue" alt="Tech Stack" />
+
+<img src="https://img.shields.io/badge/React-19-blue?style=flat-square" alt="React" />
+<img src="https://img.shields.io/badge/Rust-orange?style=flat-square" alt="Rust" />
+<img src="https://img.shields.io/badge/Tauri-v2-purple?style=flat-square" alt="Tauri" />
+
 <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License" />
 
 **A high-performance desktop application for parsing Unreal Engine log files**
@@ -94,7 +99,6 @@ npm run tauri dev
 ### Build for Production
 
 ```bash
-# Build for production
 npm run tauri build
 ```
 

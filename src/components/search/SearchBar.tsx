@@ -82,7 +82,14 @@ export function SearchBar() {
           onChange={(e) => setLocalPattern(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              handleSearch();
+              e.preventDefault();
+              if (resultCount > 0) {
+                // 已有搜索结果，Enter 跳转到下一个
+                nextSearchResult();
+              } else {
+                // 无搜索结果，Enter 执行搜索
+                handleSearch();
+              }
             }
           }}
         />

@@ -126,7 +126,7 @@ export function SearchBar() {
           onClick={toggleRegex}
           title={searchOptions.use_regex ? '正则模式' : '文本模式'}
         >
-          {searchOptions.use_regex ? '.*' : 'Aa'}
+          {searchOptions.use_regex ? '.*' : 'Txt'}
         </button>
 
         {/* 大小写切换 */}

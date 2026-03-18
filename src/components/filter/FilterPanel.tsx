@@ -1,6 +1,6 @@
 //! 过滤面板组件 - Apple 风格扁平设计
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLogStore } from '../../stores/logStore';
 import { useFilterStore } from '../../stores/filterStore';
 import type { LogLevel } from '../../types/log';
@@ -42,12 +42,25 @@ export function FilterPanel() {
   const [showLevels, setShowLevels] = useState(true);
   const [showCategories, setShowCategories] = useState(true);
 
-  // Apply filter and fetch matching lines from backend
-  const handleApplyFilter = useCallback(() => {
-    const levels = Array.from(selectedLevels);
-    const categories = Array.from(selectedCategories);
-    applyLevelCategoryFilter(levels, categories);
-  }, [selectedLevels, selectedCategories, applyLevelCategoryFilter]);
+  // Auto-apply filter when levels or categories change
+  useEffect(() => {
+    if (!fileIndex) return;
+
+    // Debounce to avoid too many calls when clicking rapidly
+    const timer = setTimeout(() => {
+      const levels = Array.from(selectedLevels);
+      const categories = Array.from(selectedCategories);
+
+      if (levels.length > 0 || categories.length > 0) {
+        applyLevelCategoryFilter(levels, categories);
+      } else if (showFilteredOnly) {
+        // Clear filter if nothing selected
+        clearFilteredLines();
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [selectedLevels, selectedCategories, fileIndex, applyLevelCategoryFilter, clearFilteredLines, showFilteredOnly]);
 
   // Clear filter and show all lines
   const handleClearFilter = useCallback(() => {
@@ -185,40 +198,28 @@ export function FilterPanel() {
         )}
       </div>
 
-      {/* 应用过滤按钮 */}
-      <div className="filter-actions">
-        {showFilteredOnly && filteredLines.length > 0 && (
-          <div className="filter-status">
-            {filteredLines.length.toLocaleString()} matching lines
+      {/* 状态栏 */}
+      <div className="filter-status-bar">
+        {isLoading ? (
+          <div className="filter-loading">
+            <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
+            </svg>
+            <span>Loading...</span>
           </div>
-        )}
-
-        <div className="filter-actions-row">
-          <button
-            className={`filter-apply-btn ${hasActiveFilters ? '' : 'disabled'}`}
-            onClick={handleApplyFilter}
-            disabled={!hasActiveFilters || isLoading}
-          >
-            {isLoading ? (
-              <>
-                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
-                </svg>
-                <span>Loading...</span>
-              </>
-            ) : (
-              'Apply Filter'
-            )}
-          </button>
-
-          {showFilteredOnly && (
+        ) : showFilteredOnly && filteredLines.length > 0 ? (
+          <>
+            <span className="filter-status-count">{filteredLines.length.toLocaleString()} matching lines</span>
             <button className="filter-clear-btn" onClick={handleClearFilter} title="Clear filter">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
+              <span>Clear</span>
             </button>
-          )}
-        </div>
+          </>
+        ) : hasActiveFilters ? (
+          <span className="filter-status-hint">Select filters to apply</span>
+        ) : null}
       </div>
 
       <style>{`
@@ -452,60 +453,44 @@ export function FilterPanel() {
           font-size: 13px;
         }
 
-        .filter-actions {
-          padding: 12px 16px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .filter-status {
-          text-align: center;
-          font-size: 12px;
-          color: rgba(59, 130, 246, 0.8);
-          margin-bottom: 8px;
-        }
-
-        .filter-actions-row {
-          display: flex;
-          gap: 8px;
-        }
-
-        .filter-apply-btn {
-          flex: 1;
-          padding: 10px 16px;
-          background: rgba(59, 130, 246, 0.8);
-          border: none;
-          border-radius: 6px;
-          color: white;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
+        .filter-status-bar {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 6px;
-          transition: all 0.15s;
+          justify-content: space-between;
+          padding: 10px 16px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          min-height: 40px;
         }
 
-        .filter-apply-btn:hover:not(.disabled) {
-          background: rgba(59, 130, 246, 1);
+        .filter-loading {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: rgba(59, 130, 246, 0.8);
+          font-size: 12px;
         }
 
-        .filter-apply-btn.disabled {
-          background: rgba(255, 255, 255, 0.1);
+        .filter-status-count {
+          font-size: 12px;
+          color: rgba(59, 130, 246, 0.8);
+        }
+
+        .filter-status-hint {
+          font-size: 12px;
           color: rgba(255, 255, 255, 0.4);
-          cursor: not-allowed;
         }
 
         .filter-clear-btn {
-          padding: 10px 12px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 12px;
           background: rgba(255, 255, 255, 0.1);
           border: none;
           border-radius: 6px;
           color: rgba(255, 255, 255, 0.6);
+          font-size: 12px;
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
           transition: all 0.15s;
         }
 

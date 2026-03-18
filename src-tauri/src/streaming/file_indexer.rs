@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
-use crate::parser::{FileIndex, LogParser};
+use crate::parser::{FileIndex, LogLevel, LogParser};
 
 /// 文件索引器
 pub struct FileIndexer {
@@ -57,12 +57,12 @@ impl FileIndexer {
                         if let Some(category) = LogParser::extract_category(line) {
                             *categories.entry(category).or_insert(0) += 1;
                         }
-                        // 提取级别
-                        if let Some(level) = LogParser::extract_level(line) {
-                            *level_counts
-                                .entry(level.display_name().to_lowercase())
-                                .or_insert(0) += 1;
-                        }
+                        // 提取级别 (未匹配的计入 unknown)
+                        let level = LogParser::extract_level(line)
+                            .unwrap_or(LogLevel::Unknown);
+                        *level_counts
+                            .entry(level.display_name().to_lowercase())
+                            .or_insert(0) += 1;
                     }
                 }
 

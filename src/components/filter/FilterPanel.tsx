@@ -1,6 +1,6 @@
 //! 过滤面板组件 - Apple 风格扁平设计
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLogStore } from '../../stores/logStore';
 import { useFilterStore } from '../../stores/filterStore';
 import type { LogLevel } from '../../types/log';
@@ -41,6 +41,9 @@ export function FilterPanel() {
 
   const [showLevels, setShowLevels] = useState(true);
   const [showCategories, setShowCategories] = useState(true);
+  const [levelsHeight, setLevelsHeight] = useState(280); // Default height for levels section
+  const [isDragging, setIsDragging] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Auto-apply filter when levels or categories change
   useEffect(() => {
@@ -96,7 +99,7 @@ export function FilterPanel() {
   const hasActiveFilters = selectedLevels.size > 0 || selectedCategories.size > 0;
 
   return (
-    <div className="filter-panel">
+    <div className="filter-panel" ref={panelRef}>
       {/* 标题 */}
       <div className="filter-header">
         <h2>Filters</h2>
@@ -108,7 +111,7 @@ export function FilterPanel() {
       </div>
 
       {/* 日志级别过滤 */}
-      <div className="filter-section">
+      <div className="filter-section" style={{ flex: `0 0 ${levelsHeight}px`, minHeight: showLevels ? '120px' : '40px' }}>
         <button
           className="filter-section-header"
           onClick={() => setShowLevels(!showLevels)}
@@ -140,6 +143,38 @@ export function FilterPanel() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* 可调整大小的分隔条 */}
+      <div
+        className={`filter-resize-handle ${isDragging ? 'active' : ''}`}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+          const startY = e.clientY;
+          const startHeight = levelsHeight;
+
+          const handleMouseMove = (e: MouseEvent) => {
+            const delta = e.clientY - startY;
+            const newHeight = Math.min(400, Math.max(120, startHeight + delta));
+            setLevelsHeight(newHeight);
+          };
+
+          const handleMouseUp = () => {
+            setIsDragging(false);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+          };
+
+          document.addEventListener('mousemove', handleMouseMove);
+          document.addEventListener('mouseup', handleMouseUp);
+          document.body.style.cursor = 'row-resize';
+          document.body.style.userSelect = 'none';
+        }}
+      >
+        <div className="filter-resize-handle-bar" />
       </div>
 
       {/* 类别过滤 */}
@@ -278,6 +313,36 @@ export function FilterPanel() {
 
         .filter-section {
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          overflow: hidden;
+        }
+
+        .filter-resize-handle {
+          height: 6px;
+          background: transparent;
+          cursor: row-resize;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.15s;
+          flex-shrink: 0;
+        }
+
+        .filter-resize-handle:hover,
+        .filter-resize-handle.active {
+          background: rgba(59, 130, 246, 0.2);
+        }
+
+        .filter-resize-handle-bar {
+          width: 40px;
+          height: 2px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 1px;
+          transition: background 0.15s;
+        }
+
+        .filter-resize-handle:hover .filter-resize-handle-bar,
+        .filter-resize-handle.active .filter-resize-handle-bar {
+          background: rgba(59, 130, 246, 0.8);
         }
 
         .filter-section-header {

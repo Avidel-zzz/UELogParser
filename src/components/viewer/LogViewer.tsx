@@ -424,22 +424,26 @@ export function LogViewer() {
 
   // 跳转到搜索结果
   useEffect(() => {
-    if (currentSearchIndex >= 0 && searchResults.length > 0) {
+    if (currentSearchIndex >= 0 && searchResults.length > 0 && currentSearchLine > 0) {
       if (effectiveShowSearch) {
         // In search-only mode, find the index in uniqueSearchLines
         const idx = uniqueSearchLines.indexOf(currentSearchLine);
         if (idx >= 0) {
           virtualizer.scrollToIndex(idx, { align: 'center' });
         }
-      } else if (!effectiveShowFiltered) {
-        // In normal mode, scroll to the line number
-        if (currentSearchLine > 0) {
-          virtualizer.scrollToIndex(currentSearchLine - 1, { align: 'center' });
-          scrollToLine(currentSearchLine);
+      } else if (effectiveShowFiltered) {
+        // In filtered mode, find the index in filteredLines
+        const idx = filteredLines.indexOf(currentSearchLine);
+        if (idx >= 0) {
+          virtualizer.scrollToIndex(idx, { align: 'center' });
         }
+      } else {
+        // In normal mode, scroll to the line number
+        virtualizer.scrollToIndex(currentSearchLine - 1, { align: 'center' });
+        scrollToLine(currentSearchLine);
       }
     }
-  }, [currentSearchIndex, currentSearchLine, virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, searchResults.length, uniqueSearchLines]);
+  }, [currentSearchIndex, currentSearchLine, virtualizer, scrollToLine, effectiveShowSearch, effectiveShowFiltered, searchResults.length, uniqueSearchLines, filteredLines]);
 
   // 右键菜单处理
   const handleContextMenu = useCallback((e: React.MouseEvent, text: string) => {

@@ -76,15 +76,14 @@ fn scan_file_for_filter(
         let line = line_result?;
 
         // Extract level and category from the line
-        let line_level = crate::parser::LogParser::extract_level(&line);
+        // If level cannot be extracted, treat it as Unknown
+        let line_level = crate::parser::LogParser::extract_level(&line)
+            .unwrap_or(LogLevel::Unknown);
         let line_category = crate::parser::LogParser::extract_category(&line);
 
         // Check if line matches filter
         let level_match = if filter_by_level {
-            line_level
-                .as_ref()
-                .map(|l| levels.contains(l))
-                .unwrap_or(false)
+            levels.contains(&line_level)
         } else {
             true
         };

@@ -227,10 +227,71 @@ const LogLine = memo(function LogLine({
   );
 });
 
+/// 搜索结果面板
+function SearchResultsPanel({
+  width,
+  onClose,
+  onJumpToLine,
+}: {
+  width: number;
+  onClose: () => void;
+  onJumpToLine: (line: number) => void;
+}) {
+  const { searchResults, currentSearchIndex, entriesMap } = useLogStore();
+
+  // Deduplicate by line number
+  const uniqueResults = useMemo(() => {
+    const seen = new Set<number>();
+    return searchResults.filter(r => {
+      if (seen.has(r.line_number)) return false;
+      seen.add(r.line_number);
+      return true;
+    });
+  }, [searchResults]);
+
+  return (
+    <div className="search-results-panel" style={{ width }}>
+      <div className="search-results-header">
+        <span className="search-results-title">
+          Search Results ({uniqueResults.length})
+        </span>
+        <button onClick={onClose} className="search-results-close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div className="search-results-list">
+        {uniqueResults.length === 0 ? (
+          <div className="search-results-empty">No search results</div>
+        ) : (
+          uniqueResults.map((result, idx) => {
+            const entry = entriesMap[result.line_number];
+            const isCurrent = idx === currentSearchIndex;
+            return (
+              <div
+                key={`${result.line_number}-${result.start}`}
+                className={`search-results-item ${isCurrent ? 'current' : ''}`}
+                onClick={() => onJumpToLine(result.line_number)}
+              >
+                <span className="search-results-line">Line {result.line_number}</span>
+                <span className="search-results-preview">{entry?.raw || result.matched_text}</span>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 /// 日志查看器
 export function LogViewer() {
   const parentRef = useRef<HTMLDivElement>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchPanelWidth, setSearchPanelWidth] = useState(300);
+  const [isDraggingSearchPanel, setIsDraggingSearchPanel] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
 
   const {
@@ -428,6 +489,19 @@ export function LogViewer() {
               </button>
             </span>
           )}
+
+          {searchResults.length > 0 && (
+            <button
+              className={`log-toggle-results-btn ${showSearchResults ? 'active' : ''}`}
+              onClick={() => setShowSearchResults(!showSearchResults)}
+              title="Toggle search results panel"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <line x1="15" y1="3" x2="15" y2="21" />
+              </svg>
+            </button>
+          )}
         </div>
 
         <div className="log-toolbar-right">
@@ -529,6 +603,56 @@ export function LogViewer() {
           })}
         </div>
       </div>
+
+      {/* 搜索结果面板 */}
+      {showSearchResults && searchResults.length > 0 && (
+        <>
+          <div
+            className={`log-resize-handle ${isDraggingSearchPanel ? 'active' : ''}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsDraggingSearchPanel(true);
+              const startX = e.clientX;
+              const startWidth = searchPanelWidth;
+
+              const handleMouseMove = (e: MouseEvent) => {
+                const delta = startX - e.clientX;
+                const newWidth = Math.min(400, Math.max(200, startWidth + delta));
+                setSearchPanelWidth(newWidth);
+              };
+
+              const handleMouseUp = () => {
+                setIsDraggingSearchPanel(false);
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+              };
+
+              document.addEventListener('mousemove', handleMouseMove);
+              document.addEventListener('mouseup', handleMouseUp);
+              document.body.style.cursor = 'col-resize';
+              document.body.style.userSelect = 'none';
+            }}
+          />
+          <SearchResultsPanel
+            width={searchPanelWidth}
+            onClose={() => setShowSearchResults(false)}
+            onJumpToLine={(line) => {
+              if (effectiveShowSearch) {
+                const idx = uniqueSearchLines.indexOf(line);
+                if (idx >= 0) virtualizer.scrollToIndex(idx, { align: 'center' });
+              } else if (effectiveShowFiltered) {
+                const idx = filteredLines.indexOf(line);
+                if (idx >= 0) virtualizer.scrollToIndex(idx, { align: 'center' });
+              } else {
+                virtualizer.scrollToIndex(line - 1, { align: 'center' });
+                scrollToLine(line);
+              }
+            }}
+          />
+        </>
+      )}
 
       {/* 设置面板 */}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
@@ -675,6 +799,132 @@ export function LogViewer() {
         .log-settings-btn:hover {
           background: rgba(255, 255, 255, 0.1);
           color: rgba(255, 255, 255, 0.8);
+        }
+
+        .log-toggle-results-btn {
+          background: transparent;
+          border: none;
+          padding: 6px 8px;
+          border-radius: 6px;
+          color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          display: flex;
+          transition: all 0.15s;
+        }
+
+        .log-toggle-results-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .log-toggle-results-btn.active {
+          background: rgba(59, 130, 246, 0.2);
+          color: rgba(96, 165, 250, 1);
+        }
+
+        .log-resize-handle {
+          position: absolute;
+          right: 300px;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: transparent;
+          cursor: col-resize;
+          z-index: 10;
+          transition: background 0.15s;
+        }
+
+        .log-resize-handle:hover,
+        .log-resize-handle.active {
+          background: rgba(59, 130, 246, 0.5);
+        }
+
+        /* Search Results Panel */
+        .search-results-panel {
+          position: absolute;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          background: rgba(30, 30, 30, 0.98);
+          backdrop-filter: blur(10px);
+          border-left: 1px solid rgba(255, 255, 255, 0.1);
+          display: flex;
+          flex-direction: column;
+          z-index: 5;
+        }
+
+        .search-results-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .search-results-title {
+          font-size: 12px;
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.8);
+        }
+
+        .search-results-close {
+          background: transparent;
+          border: none;
+          padding: 4px;
+          border-radius: 4px;
+          color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          display: flex;
+          transition: all 0.15s;
+        }
+
+        .search-results-close:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+
+        .search-results-list {
+          flex: 1;
+          overflow-y: auto;
+        }
+
+        .search-results-empty {
+          padding: 40px 20px;
+          text-align: center;
+          color: rgba(255, 255, 255, 0.4);
+          font-size: 13px;
+        }
+
+        .search-results-item {
+          padding: 10px 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+
+        .search-results-item:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .search-results-item.active {
+          background: rgba(59, 130, 246, 0.15);
+        }
+
+        .search-results-line {
+          display: block;
+          font-size: 11px;
+          color: rgba(59, 130, 246, 0.8);
+          margin-bottom: 4px;
+        }
+
+        .search-results-preview {
+          display: block;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.7);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
         }
 
         /* Log Content */
